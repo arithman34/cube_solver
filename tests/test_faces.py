@@ -1,15 +1,15 @@
 import pytest
 
 from cube.faces import (
-    Face,
-    index,
-    center_index,
-    opposite,
-    face_from_letter,
-    NUM_FACES,
     FACE_SIZE,
+    NUM_FACES,
     NUM_STICKERS_PER_FACE,
     TOTAL_STICKERS,
+    Face,
+    center_index,
+    face_from_letter,
+    index,
+    opposite,
 )
 
 
