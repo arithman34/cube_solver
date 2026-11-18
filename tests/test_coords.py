@@ -33,6 +33,7 @@ COORDINATES = [
     (get_slice_perm, set_slice_perm, N_SLICE_PERM),
 ]
 
+
 def _cubies(moves: str) -> CubieCube:
     cubies = CubieCube.solved()
     for move in moves.split():
@@ -81,7 +82,11 @@ def test_set_builds_a_real_cube(get, set_, size):
 )
 def test_phase_1_coordinates_after_one_move(moves, twist, flip, slice_):
     cubies = _cubies(moves)
-    assert (get_twist(cubies), get_flip(cubies), get_slice(cubies)) == (twist, flip, slice_)
+    assert (get_twist(cubies), get_flip(cubies), get_slice(cubies)) == (
+        twist,
+        flip,
+        slice_,
+    )
 
 
 def test_phase_2_moves_keep_phase_1_coordinates_at_zero():

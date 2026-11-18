@@ -34,11 +34,12 @@ PHASE_2_MOVES = ("U", "U'", "U2", "D", "D'", "D2", "R2", "L2", "F2", "B2")
 
 DATA_DIR = Path(__file__).parent / "data"
 
+
 def build_move_table(
-        get: Callable[[CubieCube], int],
-        set_: Callable[[int], CubieCube],
-        size: int,
-        moves: tuple[str, ...]
+    get: Callable[[CubieCube], int],
+    set_: Callable[[int], CubieCube],
+    size: int,
+    moves: tuple[str, ...],
 ) -> NDArray[np.int32]:
     """table[value, move] = the coordinate after doing moves[m] to a cube with that value. Shape (size, len(moves))."""
     table = np.empty((size, len(moves)), dtype=np.int32)
@@ -54,10 +55,10 @@ def build_move_table(
 
 
 def build_pruning_table(
-        move_a: NDArray[np.int32],
-        move_b: NDArray[np.int32]
+    move_a: NDArray[np.int32], move_b: NDArray[np.int32]
 ) -> NDArray[np.int8]:
-    """Fewest moves from each (a, b) pair to (0, 0), found by breadth-first search. Shape (size_a * size_b,), indexed a * size_b + b."""
+    """Fewest moves from each (a, b) pair to (0, 0), found by breadth-first search.
+    Shape (size_a, size_b), indexed prune[a, b]."""
     size_a, size_b = move_a.shape[0], move_b.shape[0]
     prune = np.full((size_a, size_b), -1, dtype=np.int8)
     prune[0, 0] = 0
@@ -85,6 +86,7 @@ def build_pruning_table(
         depth += 1
 
     return prune
+
 
 def _load_or_build(name: str, build: Callable[[], NDArray]) -> NDArray:
     """Load DATA_DIR/name.npy if it exists. Otherwise build it, save it, and return it."""
