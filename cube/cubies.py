@@ -100,12 +100,16 @@ class CubieCube:
     def multiply(self, other: "CubieCube") -> Self:
         """The cube you get by doing self, then other."""
         new_corner_perm = self.corner_perm[other.corner_perm]
-        new_corner_orient = (self.corner_orient[other.corner_perm] + other.corner_orient) % 3
+        new_corner_orient = (
+            self.corner_orient[other.corner_perm] + other.corner_orient
+        ) % 3
 
         new_edge_perm = self.edge_perm[other.edge_perm]
         new_edge_orient = (self.edge_orient[other.edge_perm] + other.edge_orient) % 2
 
-        return type(self)(new_corner_perm, new_corner_orient, new_edge_perm, new_edge_orient)
+        return type(self)(
+            new_corner_perm, new_corner_orient, new_edge_perm, new_edge_orient
+        )
 
     def apply_move(self, move: str) -> Self:
         """Return a new CubieCube with one move applied."""
@@ -119,12 +123,14 @@ class CubieCube:
         if not isinstance(other, CubieCube):
             return NotImplemented
 
-        return all([
-            np.array_equal(self.corner_perm, other.corner_perm),
-            np.array_equal(self.corner_orient, other.corner_orient),
-            np.array_equal(self.edge_perm, other.edge_perm),
-            np.array_equal(self.edge_orient, other.edge_orient)
-        ])
+        return all(
+            [
+                np.array_equal(self.corner_perm, other.corner_perm),
+                np.array_equal(self.corner_orient, other.corner_orient),
+                np.array_equal(self.edge_perm, other.edge_perm),
+                np.array_equal(self.edge_orient, other.edge_orient),
+            ]
+        )
 
 
 def _build_move_cubies() -> dict[str, CubieCube]:

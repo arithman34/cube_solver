@@ -94,7 +94,9 @@ def test_scrambled_cube_keeps_the_rules(seed):
     cubies = CubieCube.from_stickers(cube.stickers)
     assert cubies.corner_orient.sum() % 3 == 0
     assert cubies.edge_orient.sum() % 2 == 0
-    assert permutation_parity(cubies.corner_perm) == permutation_parity(cubies.edge_perm)
+    assert permutation_parity(cubies.corner_perm) == permutation_parity(
+        cubies.edge_perm
+    )
 
 
 def test_eq_different_cubes():
@@ -136,7 +138,9 @@ def test_apply_move_matches_stickers_after_scramble(seed):
 
 @pytest.mark.parametrize("face", [face.name for face in Face])
 def test_move_then_prime_is_solved(face):
-    assert CubieCube.solved().apply_move(face).apply_move(face + "'") == CubieCube.solved()
+    assert (
+        CubieCube.solved().apply_move(face).apply_move(face + "'") == CubieCube.solved()
+    )
 
 
 def test_apply_move_rejects_unknown_move():
