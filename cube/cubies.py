@@ -5,6 +5,8 @@ import numpy as np
 from numpy.typing import ArrayLike, NDArray
 
 from cube.faces import NUM_STICKERS_PER_FACE, Face, index
+from cube.moves import MOVE_NAMES, apply_move
+from cube.state import SOLVED_STICKERS
 
 U, R, F, D, L, B = Face
 
@@ -59,6 +61,8 @@ class CubieCube:
     edge_perm: NDArray[np.intp]
     edge_orient: NDArray[np.intp]
 
+    __array_ufunc__ = None
+
     @classmethod
     def solved(cls) -> Self:
         """Every piece in its home slot, orientation 0."""
@@ -92,6 +96,43 @@ class CubieCube:
             raise ValueError("The same edge appears more than once.")
 
         return cls(corner_perm, corner_orient, edge_perm, edge_orient)
+
+    def multiply(self, other: "CubieCube") -> Self:
+        """The cube you get by doing self, then other."""
+        new_corner_perm = self.corner_perm[other.corner_perm]
+        new_corner_orient = (self.corner_orient[other.corner_perm] + other.corner_orient) % 3
+
+        new_edge_perm = self.edge_perm[other.edge_perm]
+        new_edge_orient = (self.edge_orient[other.edge_perm] + other.edge_orient) % 2
+
+        return type(self)(new_corner_perm, new_corner_orient, new_edge_perm, new_edge_orient)
+
+    def apply_move(self, move: str) -> Self:
+        """Return a new CubieCube with one move applied."""
+        if move not in MOVE_CUBIES:
+            raise ValueError(f"Unknown move. Got {move!r}.")
+
+        return self.multiply(MOVE_CUBIES[move])
+
+    def __eq__(self, other: object) -> bool:
+        """Equal if all four arrays match."""
+        if not isinstance(other, CubieCube):
+            return NotImplemented
+
+        return all([
+            np.array_equal(self.corner_perm, other.corner_perm),
+            np.array_equal(self.corner_orient, other.corner_orient),
+            np.array_equal(self.edge_perm, other.edge_perm),
+            np.array_equal(self.edge_orient, other.edge_orient)
+        ])
+
+
+def _build_move_cubies() -> dict[str, CubieCube]:
+    """All 18 moves as CubieCubes, read from the sticker moves."""
+    return {
+        name: CubieCube.from_stickers(apply_move(SOLVED_STICKERS, name))
+        for name in MOVE_NAMES
+    }
 
 
 def _find_corner(faces: tuple[int, ...]) -> tuple[int, int]:
@@ -127,3 +168,6 @@ def permutation_parity(perm: ArrayLike) -> int:
             seen[i] = True
             i = perm[i]
     return (len(perm) - cycles) % 2
+
+
+MOVE_CUBIES: dict[str, CubieCube] = _build_move_cubies()

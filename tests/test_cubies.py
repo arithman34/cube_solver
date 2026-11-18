@@ -4,12 +4,14 @@ import pytest
 from cube.cubies import (
     CORNER_FACELETS,
     EDGE_FACELETS,
+    MOVE_CUBIES,
     NUM_CORNERS,
     NUM_EDGES,
     CubieCube,
     permutation_parity,
 )
 from cube.faces import Face, center_index
+from cube.moves import MOVE_NAMES
 from cube.state import SOLVED_STICKERS, Cube
 
 
@@ -32,12 +34,7 @@ def test_solved():
 
 
 def test_from_stickers_solved():
-    cubies = CubieCube.from_stickers(SOLVED_STICKERS)
-    solved = CubieCube.solved()
-    assert np.array_equal(cubies.corner_perm, solved.corner_perm)
-    assert np.array_equal(cubies.corner_orient, solved.corner_orient)
-    assert np.array_equal(cubies.edge_perm, solved.edge_perm)
-    assert np.array_equal(cubies.edge_orient, solved.edge_orient)
+    assert CubieCube.from_stickers(SOLVED_STICKERS) == CubieCube.solved()
 
 
 def test_from_stickers_after_r():
@@ -98,3 +95,50 @@ def test_scrambled_cube_keeps_the_rules(seed):
     assert cubies.corner_orient.sum() % 3 == 0
     assert cubies.edge_orient.sum() % 2 == 0
     assert permutation_parity(cubies.corner_perm) == permutation_parity(cubies.edge_perm)
+
+
+def test_eq_different_cubes():
+    assert CubieCube.solved() != _cubies("R")
+
+
+def test_eq_with_non_cubie_cube_is_false():
+    assert (CubieCube.solved() == SOLVED_STICKERS) is False
+
+
+def test_move_cubies_has_all_18_moves():
+    assert list(MOVE_CUBIES) == list(MOVE_NAMES)
+
+
+def test_multiply_by_solved_is_unchanged():
+    cubies = _cubies("R U F'")
+    assert cubies.multiply(CubieCube.solved()) == cubies
+    assert CubieCube.solved().multiply(cubies) == cubies
+
+
+def test_multiply_matches_sticker_moves():
+    assert _cubies("R").multiply(_cubies("F")) == _cubies("R F")
+
+
+@pytest.mark.parametrize("move", MOVE_NAMES)
+def test_apply_move_matches_sticker_move(move):
+    assert CubieCube.solved().apply_move(move) == _cubies(move)
+
+
+@pytest.mark.parametrize("seed", range(3))
+def test_apply_move_matches_stickers_after_scramble(seed):
+    rng = np.random.default_rng(seed)
+    sequence = [str(move) for move in rng.choice(MOVE_NAMES, size=40)]
+    cubies = CubieCube.solved()
+    for move in sequence:
+        cubies = cubies.apply_move(move)
+    assert cubies == _cubies(" ".join(sequence))
+
+
+@pytest.mark.parametrize("face", [face.name for face in Face])
+def test_move_then_prime_is_solved(face):
+    assert CubieCube.solved().apply_move(face).apply_move(face + "'") == CubieCube.solved()
+
+
+def test_apply_move_rejects_unknown_move():
+    with pytest.raises(ValueError, match="Unknown move"):
+        CubieCube.solved().apply_move("X")
