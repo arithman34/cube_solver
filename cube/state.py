@@ -138,7 +138,13 @@ class Cube:
     @classmethod
     def scramble(cls, num_moves: int, seed: int | None = None) -> Self:
         """Return a cube scrambled by random moves (repeatable with a seed)."""
-        rng = np.random.default_rng(seed)
-        moves = list(rng.choice(MOVE_NAMES, size=num_moves))
-
+        moves = random_moves(num_moves, seed)
         return cls.solved().apply_moves(moves)
+
+
+def random_moves(num_moves: int, seed: int | None = None) -> list[str]:
+    """Random move names (repeatable with a seed)."""
+    rng = np.random.default_rng(seed)
+    moves = list(rng.choice(MOVE_NAMES, size=num_moves))
+
+    return [str(move) for move in moves]
