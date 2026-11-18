@@ -19,3 +19,6 @@ htmlcov/
 
 # Secrets
 .env
+
+# Solver tables
+cube/solver/data/
