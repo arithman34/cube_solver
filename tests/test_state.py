@@ -111,10 +111,7 @@ def test_eq_different_stickers():
     assert Cube.solved() != _unsolved_cube()
 
 
-@pytest.mark.parametrize(
-    "other",
-    [SOLVED_STRING, SOLVED_STICKERS]
-)
+@pytest.mark.parametrize("other", [SOLVED_STRING, SOLVED_STICKERS])
 def test_eq_with_non_cube_is_false(other):
     assert (Cube.solved() == other) is False
 
@@ -181,3 +178,41 @@ def test_to_array_returns_writable_copy():
 def test_apply_moves_empty_returns_equal_cube(moves):
     cube = _unsolved_cube()
     assert cube.apply_moves(moves) == cube
+
+
+def test_apply_move_returns_new_cube():
+    cube = Cube.solved()
+    turned = cube.apply_move("R")
+    assert isinstance(turned, Cube)
+    assert not turned.is_solved()
+    assert cube.is_solved()
+
+
+def test_apply_move_rejects_unknown_move():
+    with pytest.raises(ValueError, match="Unknown move"):
+        Cube.solved().apply_move("X")
+
+
+@pytest.mark.parametrize("moves", ["R U R' U'", ["R", "U", "R'", "U'"]])
+def test_apply_moves_accepts_string_or_list(moves):
+    assert Cube.solved().apply_moves(moves) == Cube.solved().apply_moves("R U R' U'")
+
+
+def test_apply_moves_sexy_move_six_times_is_solved():
+    assert Cube.solved().apply_moves("R U R' U' " * 6).is_solved()
+
+
+def test_scramble_is_not_solved():
+    assert not Cube.scramble(20, seed=0).is_solved()
+
+
+def test_scramble_zero_moves_is_solved():
+    assert Cube.scramble(0, seed=0).is_solved()
+
+
+def test_scramble_same_seed_gives_same_cube():
+    assert Cube.scramble(20, seed=42) == Cube.scramble(20, seed=42)
+
+
+def test_scramble_different_seeds_give_different_cubes():
+    assert Cube.scramble(20, seed=1) != Cube.scramble(20, seed=2)

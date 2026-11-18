@@ -11,6 +11,7 @@ from cube.faces import (
     Face,
     face_from_letter,
 )
+from cube.moves import MOVE_NAMES, apply_move
 
 SOLVED_STICKERS: NDArray[np.uint8] = np.repeat(
     np.arange(NUM_FACES, dtype=np.uint8), NUM_STICKERS_PER_FACE
@@ -120,7 +121,8 @@ class Cube:
 
     def apply_move(self, move: str) -> Self:
         """Return a new cube with one move applied."""
-        raise NotImplementedError()
+        new_stickers = apply_move(self.stickers, move)
+        return type(self)(new_stickers)
 
     def apply_moves(self, moves: str | list[str]) -> Self:
         """Return a new cube with a sequence applied."""
@@ -135,5 +137,8 @@ class Cube:
 
     @classmethod
     def scramble(cls, num_moves: int, seed: int | None = None) -> Self:
-        """Return a cube scramble by random moves (repeatable with a seed)."""
-        raise NotImplementedError()
+        """Return a cube scrambled by random moves (repeatable with a seed)."""
+        rng = np.random.default_rng(seed)
+        moves = list(rng.choice(MOVE_NAMES, size=num_moves))
+
+        return cls.solved().apply_moves(moves)
