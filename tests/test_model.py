@@ -3,7 +3,7 @@ import pytest
 torch = pytest.importorskip("torch")
 
 from training.data import generate
-from training.encoding import encode_batch
+from training.encoding import encode_stickers
 from training.model import ValueNet
 
 
@@ -12,9 +12,9 @@ def count_parameters(model):
 
 
 def test_predicts_one_distance_per_cube():
-    cubes, _ = generate(8, max_moves=10, seed=0)
+    stickers, _ = generate(8, max_moves=10, seed=0)
 
-    predictions = ValueNet()(encode_batch(cubes))
+    predictions = ValueNet()(encode_stickers(stickers))
 
     assert predictions.shape == (8,)
     assert predictions.dtype == torch.float32
@@ -36,9 +36,9 @@ def test_parameter_count():
 
 def test_training_reduces_loss_on_a_small_batch():
     torch.manual_seed(0)
-    cubes, depths = generate(32, max_moves=5, seed=1)
-    x = encode_batch(cubes)
-    y = torch.tensor(depths, dtype=torch.float32)
+    stickers, depths = generate(32, max_moves=5, seed=1)
+    x = encode_stickers(stickers)
+    y = torch.from_numpy(depths).float()
     model = ValueNet(hidden_size=64)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-2)
 

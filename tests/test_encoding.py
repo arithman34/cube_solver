@@ -1,10 +1,12 @@
+import numpy as np
 import pytest
 
 torch = pytest.importorskip("torch")
 
 from cube.faces import Face
 from cube.state import Cube
-from training.encoding import encode, encode_batch
+from training.data import generate
+from training.encoding import encode, encode_batch, encode_stickers
 
 SOLVED = Cube.solved().to_string()
 
@@ -51,3 +53,15 @@ def test_encode_batch_stacks_rows():
     assert batch.shape == (3, 324)
     for row, cube in zip(batch, cubes):
         assert torch.equal(row, encode(cube))
+
+
+def test_encode_stickers_matches_encode_batch():
+    stickers, _ = generate(10, max_moves=20, seed=8)
+    cubes = [Cube(row).to_string() for row in stickers]
+
+    assert torch.equal(encode_stickers(stickers), encode_batch(cubes))
+
+
+def test_encode_stickers_rejects_wrong_shape():
+    with pytest.raises(ValueError):
+        encode_stickers(np.zeros(54, dtype=np.uint8))
