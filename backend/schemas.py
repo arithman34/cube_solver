@@ -1,11 +1,19 @@
 from pydantic import BaseModel, Field
 
 
-class SolveRequest(BaseModel):
+class CubeRequest(BaseModel):
     cube: str = Field(
         pattern=r"^[URFDLB]{54}$",
         examples=["UUUUUUUUURRRRRRRRRFFFFFFFFFDDDDDDDDDLLLLLLLLLBBBBBBBBB"],
     )
+
+
+class SolveRequest(CubeRequest):
+    pass
+
+
+class ApplyRequest(CubeRequest):
+    moves: list[str] = Field(examples=[["U", "F", "U'", "F'"]])
 
 
 class SolveResponse(BaseModel):
@@ -16,3 +24,7 @@ class SolveResponse(BaseModel):
 class ScrambleResponse(BaseModel):
     cube: str
     moves: list[str]
+
+
+class ApplyResponse(BaseModel):
+    cube: str
