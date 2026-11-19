@@ -1,0 +1,39 @@
+name: CI
+on:
+    push:
+        branches: [main]
+
+    pull_request:
+
+jobs:
+    test:
+        name: Run tests
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        steps:
+            - name: Check out code
+              uses: actions/checkout@v4
+
+            - name: Install uv
+              uses: astral-sh/setup-uv@v6
+              with:
+                enable-cache: true
+
+            - name: Install dependencies
+              run: uv sync --locked
+
+            - name: Cache solver tables
+              uses: actions/cache@v4
+              with:
+                path: cube/solver/data
+                # Rebuild the tables whenever the code that defines them changes
+                key: tables-${{ hashFiles('cube/solver/coords.py', 'cube/solver/tables.py', 'cube/cubies.py', 'cube/moves.py') }}
+
+            - name: Lint
+              run: uv run ruff check .
+
+            - name: Check formatting
+              run: uv run ruff format --check .
+
+            - name: Run tests
+              run: uv run pytest
