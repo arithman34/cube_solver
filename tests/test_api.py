@@ -153,3 +153,60 @@ def test_scramble_then_solve(client):
     cube = client.get("/api/scramble", params=params).json()["cube"]
     moves = client.post("/api/solve", json={"cube": cube}).json()["moves"]
     assert Cube.from_string(cube).apply_moves(moves).is_solved()
+
+
+def test_apply_one_move(client):
+    response = client.post("/api/apply", json={"cube": SOLVED, "moves": ["R"]})
+    assert response.status_code == 200
+    assert response.json() == {"cube": Cube.solved().apply_move("R").to_string()}
+
+
+def test_apply_no_moves_keeps_the_cube(client):
+    response = client.post("/api/apply", json={"cube": SOLVED, "moves": []})
+    assert response.json() == {"cube": SOLVED}
+
+
+def test_apply_move_then_inverse_returns(client):
+    body = {"cube": SOLVED, "moves": ["R", "U", "R'", "U'", "U", "R", "U'", "R'"]}
+    assert client.post("/api/apply", json=body).json() == {"cube": SOLVED}
+
+
+def test_apply_solution_solves_the_cube(client):
+    cube = Cube.scramble(30, seed=5).to_string()
+    moves = client.post("/api/solve", json={"cube": cube}).json()["moves"]
+    response = client.post("/api/apply", json={"cube": cube, "moves": moves})
+    assert response.json() == {"cube": SOLVED}
+
+
+def test_apply_one_step_at_a_time_matches_all_at_once(client):
+    cube = Cube.scramble(20, seed=2).to_string()
+    moves = ["F", "R2", "U'", "B", "L2"]
+    stepped = cube
+    for move in moves:
+        body = {"cube": stepped, "moves": [move]}
+        stepped = client.post("/api/apply", json=body).json()["cube"]
+    whole = client.post("/api/apply", json={"cube": cube, "moves": moves}).json()
+    assert whole == {"cube": stepped}
+
+
+@pytest.mark.parametrize("moves", [["X"], ["R", "r"], ["R3"], [""]])
+def test_apply_rejects_unknown_move(client, moves):
+    response = client.post("/api/apply", json={"cube": SOLVED, "moves": moves})
+    assert response.status_code == 422
+
+
+def test_apply_names_the_unknown_move(client):
+    response = client.post("/api/apply", json={"cube": SOLVED, "moves": ["R", "X"]})
+    assert response.json() == {"detail": ["Unknown move. Got 'X'."]}
+
+
+@pytest.mark.parametrize(
+    "body",
+    [{"cube": SOLVED}, {"moves": ["R"]}, {"cube": "X", "moves": ["R"]}],
+)
+def test_apply_rejects_bad_request(client, body):
+    assert client.post("/api/apply", json=body).status_code == 422
+
+
+def test_apply_is_post_only(client):
+    assert client.get("/api/apply").status_code == 405

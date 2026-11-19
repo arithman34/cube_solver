@@ -1,6 +1,12 @@
 from fastapi import APIRouter, HTTPException, Query
 
-from backend.schemas import ScrambleResponse, SolveRequest, SolveResponse
+from backend.schemas import (
+    ApplyRequest,
+    ApplyResponse,
+    ScrambleResponse,
+    SolveRequest,
+    SolveResponse,
+)
 from cube.solver import solve
 from cube.state import Cube, random_moves
 from cube.validation import find_errors
@@ -23,6 +29,16 @@ def solve_cube(request: SolveRequest) -> SolveResponse:
 
     moves = solve(cube)
     return SolveResponse(moves=moves, length=len(moves))
+
+
+@router.post("/apply")
+def apply_moves(request: ApplyRequest) -> ApplyResponse:
+    try:
+        cube = Cube.from_string(request.cube).apply_moves(request.moves)
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=[str(error)]) from error
+
+    return ApplyResponse(cube=cube.to_string())
 
 
 @router.get("/scramble")

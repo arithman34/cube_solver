@@ -22,6 +22,7 @@ app.include_router(router, prefix="/api")
 
 app.mount("/static", StaticFiles(directory=FRONTEND_DIR), name="static")
 
+
 @app.get("/")
 def home():
     return FileResponse(FRONTEND_DIR / "index.html")
