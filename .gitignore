@@ -22,3 +22,6 @@ htmlcov/
 
 # Solver tables
 cube/solver/data/
+
+# Jupyter
+.ipynb_checkpoints/
