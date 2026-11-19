@@ -5,6 +5,7 @@ from torch import Tensor
 from cube.faces import NUM_FACES, TOTAL_STICKERS, Face
 
 FACES = {face.name: face.value for face in Face}
+ENCODED_SIZE = TOTAL_STICKERS * NUM_FACES
 
 
 def encode(cube: str) -> Tensor:
