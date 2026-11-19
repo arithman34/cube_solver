@@ -9,12 +9,20 @@ const resetBtn = document.getElementById("reset-btn");
 const scrambleMoves = document.getElementById("scramble-moves");
 const solution = document.getElementById("solution");
 const error = document.getElementById("error");
+const prevBtn = document.getElementById("prev-btn");
+const nextBtn = document.getElementById("next-btn");
+const stepLabel = document.getElementById("step");
 
 scrambleBtn.addEventListener("click", scramble);
 solveBtn.addEventListener("click", solve);
 resetBtn.addEventListener("click", reset);
+prevBtn.addEventListener("click", previous);
+nextBtn.addEventListener("click", next);
 
 let currentCube = SOLVED;
+let moves = [];
+let step = 0;
+let busy = false;
 
 async function scramble() {
     const response = await fetch("/api/scramble");
@@ -24,6 +32,9 @@ async function scramble() {
     scrambleMoves.textContent = body.moves.join(" ");
     solution.textContent = "";
     error.textContent = "";
+    moves = [];
+    step = 0;
+    stepLabel.textContent = "";
 }
 
 async function solve() {
@@ -46,7 +57,10 @@ async function solve() {
         return;
     }
 
-    solution.textContent = body.moves.join(" ");
+    moves = body.moves;
+    step = 0;
+
+    renderSolution();
 }
 
 function errorMessage(detail) {
@@ -60,8 +74,73 @@ function reset() {
     scrambleMoves.textContent = "";
     solution.textContent = "";
     error.textContent = "";
+    moves = [];
+    step = 0;
+    stepLabel.textContent = "";
 
     renderCube(SOLVED);
+}
+
+async function applyMove(move) {
+    const response = await fetch("/api/apply", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ cube: currentCube, moves: [move] }),
+    });
+    const body = await response.json();
+
+    if (!response.ok) {
+        error.textContent = errorMessage(body.detail);
+        return false;
+    }
+
+    error.textContent = "";
+    renderCube(body.cube);
+    return true;
+}
+
+async function previous() {
+    if (busy || step === 0) {
+        return;
+    }
+
+    busy = true;
+    try {
+        if (await applyMove(inverse(moves[step - 1]))) {
+            step--;
+            renderSolution();
+        }
+    } finally {
+        busy = false;
+    }
+}
+
+async function next() {
+    if (busy || step === moves.length) {
+        return;
+    }
+
+    busy = true;
+    try {
+        if (await applyMove(moves[step])) {
+            step++;
+            renderSolution();
+        }
+    } finally {
+        busy = false;
+    }
+}
+
+function inverse(move) {
+    if (move.endsWith("'")) {
+        return move.slice(0, -1);
+    }
+
+    if (move.endsWith("2")) {
+        return move;
+    }
+
+    return move + "'";
 }
 
 function renderCube(cubeString) {
@@ -80,6 +159,28 @@ function renderCube(cubeString) {
 
         net.append(sticker);
     }
+}
+
+function renderSolution() {
+    solution.textContent = "";
+    
+    for (let i = 0; i < moves.length; i++) {
+        const chip = document.createElement("span");
+        chip.classList.add("chip");
+
+        if (i < step) {
+            chip.classList.add("done");
+        }
+
+        if (i === step) {
+            chip.classList.add("current");
+        }
+
+        chip.textContent = moves[i];
+        solution.append(chip);
+    }
+
+    stepLabel.textContent = `Step ${step} of ${moves.length}`;
 }
 
 renderCube(SOLVED);
