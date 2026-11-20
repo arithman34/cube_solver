@@ -9,7 +9,7 @@ from cube.moves import MOVE_NAMES
 from cube.state import SOLVED_STICKERS, Cube
 from training.data import IDENTITY, MOVE_PERMS
 from training.evaluate import predict
-from training.model import ValueNet
+from training.model import ValueModel
 
 
 @dataclass
@@ -25,7 +25,7 @@ def neighbours(stickers: NDArray[np.uint8]) -> NDArray[np.uint8]:
 
 
 def greedy_search(
-    model: ValueNet, cube: Cube, device: torch.device, max_steps: int = 50
+    model: ValueModel, cube: Cube, device: torch.device, max_steps: int = 50
 ) -> SearchResult:
     """Repeatedly make the move whose result the model rates closest to solved."""
     stickers = cube.stickers
@@ -67,7 +67,7 @@ def expand(beam: NDArray[np.uint8]) -> NDArray[np.uint8]:
 
 
 def beam_search(
-    model: ValueNet,
+    model: ValueModel,
     cube: Cube,
     device: torch.device,
     beam_width: int = 100,

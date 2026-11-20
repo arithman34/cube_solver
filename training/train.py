@@ -1,12 +1,16 @@
 from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import torch
 import torch.nn.functional as F
 
 from training.data import generate
 from training.encoding import encode_stickers
-from training.model import ValueNet
+from training.model import ValueModel, ValueNet, build_model
+
+if TYPE_CHECKING:
+    from training.value_iteration import ValueIterationConfig
 
 CHECKPOINT_DIR = Path(__file__).parent / "checkpoints"
 
@@ -32,7 +36,7 @@ def train_epoch(
     """Train on one set of freshly generated cubes and return the mean loss."""
     stickers, depths = generate(config.cubes_per_epoch, config.max_moves, seed)
 
-    inputs = encode_stickers(stickers).to(device)
+    inputs = encode_stickers(stickers, device)
     labels = torch.from_numpy(depths).float().to(device)
 
     model.train()
@@ -65,18 +69,18 @@ def train(config: TrainConfig, device: torch.device) -> ValueNet:
     return model
 
 
-def save_checkpoint(model: ValueNet, config: TrainConfig, path: Path) -> None:
+def save_checkpoint(
+    model: ValueModel, config: "TrainConfig | ValueIterationConfig", path: Path
+) -> None:
     """Save the weights together with the settings that produced them."""
     path.parent.mkdir(parents=True, exist_ok=True)
     torch.save({"config": asdict(config), "state_dict": model.state_dict()}, path)
 
 
-def load_checkpoint(path: Path, device: torch.device) -> ValueNet:
-    """Rebuild a ValueNet from a file written by save_checkpoint."""
+def load_checkpoint(path: Path, device: torch.device) -> ValueModel:
+    """Rebuild the network saved by save_checkpoint, whichever kind it is."""
     checkpoint = torch.load(path, map_location=device)
-    config = TrainConfig(**checkpoint["config"])
-
-    model = ValueNet(hidden_size=config.hidden_size)
+    model = build_model(checkpoint["config"])
     model.load_state_dict(checkpoint["state_dict"])
     model.to(device)
     model.eval()
