@@ -1,3 +1,4 @@
+import argparse
 from dataclasses import dataclass
 
 import numpy as np
@@ -8,7 +9,7 @@ from cube.solver import solve
 from cube.state import Cube
 from training.data import apply_scrambles, scramble_moves
 from training.encoding import encode_stickers
-from training.model import ValueNet
+from training.model import ValueModel
 from training.train import CHECKPOINT_DIR, load_checkpoint
 
 EVAL_SEED = 1_000_000
@@ -28,17 +29,28 @@ def cubes_at_depth(depth: int, n: int, rng: np.random.Generator) -> NDArray[np.u
 
 
 def predict(
-    model: ValueNet, stickers: NDArray[np.uint8], device: torch.device
+    model: ValueModel,
+    stickers: NDArray[np.uint8],
+    device: torch.device,
+    mixed_precision: bool = False,
 ) -> NDArray[np.float32]:
-    """Predicted distances as a NumPy array of shape (n,)."""
+    """Predicted distances as a NumPy array of shape (n,).
+
+    mixed_precision runs the model in bfloat16 on CUDA, which is faster and
+    uses less memory. It has no effect on the CPU.
+    """
     model.eval()
-    with torch.no_grad():
-        inputs = encode_stickers(stickers).to(device)
-        return model(inputs).cpu().numpy()
+    use_amp = mixed_precision and device.type == "cuda"
+    with (
+        torch.no_grad(),
+        torch.autocast(device_type=device.type, dtype=torch.bfloat16, enabled=use_amp),
+    ):
+        inputs = encode_stickers(stickers, device)
+        return model(inputs).float().cpu().numpy()
 
 
 def evaluate(
-    model: ValueNet,
+    model: ValueModel,
     max_moves: int,
     n_per_depth: int,
     device: torch.device,
@@ -85,11 +97,15 @@ def print_results(results: list[DepthResult]) -> None:
 
 
 def main() -> None:
-    """Load value_net.pt, evaluate it and print the table."""
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Evaluating on {device}")
+    """Load a checkpoint (value_net.pt by default), evaluate it and print the table."""
+    parser = argparse.ArgumentParser(description=main.__doc__)
+    parser.add_argument("checkpoint", nargs="?", default="value_net.pt")
+    args = parser.parse_args()
 
-    model = load_checkpoint(CHECKPOINT_DIR / "value_net.pt", device)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"Evaluating {args.checkpoint} on {device}")
+
+    model = load_checkpoint(CHECKPOINT_DIR / args.checkpoint, device)
     results = evaluate(
         model=model,
         max_moves=20,

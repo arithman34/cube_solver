@@ -13,7 +13,7 @@ from training.evaluate import (
     predict,
     print_results,
 )
-from training.model import ValueNet
+from training.model import ResidualValueNet, ValueNet
 
 CPU = torch.device("cpu")
 
@@ -128,3 +128,27 @@ def test_print_results(capsys):
         "    1       1.02       0.05         -\n"
         "   20      15.80       4.21      23.1\n"
     )
+
+
+def test_predict_ignores_mixed_precision_on_cpu():
+    model = small_model()
+    stickers = cubes_at_depth(5, 8, np.random.default_rng(0))
+
+    assert np.array_equal(
+        predict(model, stickers, CPU, mixed_precision=True),
+        predict(model, stickers, CPU),
+    )
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="needs CUDA")
+def test_predict_mixed_precision_is_close_to_float32_on_cuda():
+    cuda = torch.device("cuda")
+    torch.manual_seed(0)
+    model = ResidualValueNet(first_size=512, hidden_size=256, num_blocks=2).to(cuda)
+    stickers = cubes_at_depth(10, 100, np.random.default_rng(0))
+
+    full = predict(model, stickers, cuda)
+    mixed = predict(model, stickers, cuda, mixed_precision=True)
+
+    assert mixed.dtype == np.float32
+    assert np.allclose(mixed, full, atol=0.05)
