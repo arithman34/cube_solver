@@ -35,13 +35,17 @@ def encode_batch(cubes: list[str]) -> Tensor:
     return torch.stack([encode(cube) for cube in cubes])
 
 
-def encode_stickers(stickers: NDArray[np.uint8]) -> Tensor:
+def encode_stickers(
+    stickers: NDArray[np.uint8], device: torch.device | None = None
+) -> Tensor:
     """One-hot encode an (n, 54) array of face values into a tensor of shape (n, 324).
 
-    Same layout as encode, without going through letters.
+    Same layout as encode, without going through letters. With a device, the
+    small uint8 array is copied there first and encoded on that device, which is
+    much faster for a GPU than copying the 24x larger float tensor.
     """
     if stickers.ndim != 2 or stickers.shape[1] != TOTAL_STICKERS:
         raise ValueError(f"Expected shape (n, {TOTAL_STICKERS}). Got {stickers.shape}.")
 
-    indices = torch.from_numpy(stickers).long()
+    indices = torch.from_numpy(stickers).to(device).long()
     return F.one_hot(indices, num_classes=NUM_FACES).flatten(start_dim=1).float()

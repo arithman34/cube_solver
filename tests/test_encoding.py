@@ -65,3 +65,13 @@ def test_encode_stickers_matches_encode_batch():
 def test_encode_stickers_rejects_wrong_shape():
     with pytest.raises(ValueError):
         encode_stickers(np.zeros(54, dtype=np.uint8))
+
+
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="needs CUDA")
+def test_encode_stickers_on_cuda_matches_cpu():
+    stickers, _ = generate(20, max_moves=10, seed=0)
+
+    on_gpu = encode_stickers(stickers, torch.device("cuda"))
+
+    assert on_gpu.device.type == "cuda"
+    assert torch.equal(on_gpu.cpu(), encode_stickers(stickers))
