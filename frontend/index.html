@@ -7,39 +7,62 @@
     <title>Cube Solver</title>
 </head>
 <body>
-    <h1>Cube Solver</h1>
-    <p>Scramble a cube or paint your own, then solve it.</p>
+    <header class="page-header">
+        <h1>Cube Solver</h1>
+        <p>Scramble a cube or paint your own, then solve it.</p>
+    </header>
 
-    <div class="layout">
-        <div id="cube-scene">
-            <div id="cube-3d"></div>
-        </div>
-
-        <div>
-            <div>
-                <button id="scramble-btn" type="button">Scramble</button>
-                <label for="method-select">Solver</label>
-                <select id="method-select"></select>
-                <button id="solve-btn" type="button">Solve</button>
-                <button id="reset-btn" type="button">Reset</button>            </div>
-            <div id="palette" aria-label="Paint colour"></div>
-            <p id="scramble-moves"></p>
-            <div id="solution"></div>
-            <div>
-                <button id="prev-btn" type="button">Previous</button>
-                <span id="step"></span>
-                <button id="next-btn" type="button">Next</button>
+    <main class="layout">
+        <section class="card cube-card">
+            <div id="cube-scene">
+                <div id="cube-3d"></div>
             </div>
-            <div>
-                <label for="turn-time">Turn time</label>
-                <input id="turn-time" type="range" min="0" max="1000" step="50" value="300">
-                <output id="turn-time-value" for="turn-time">300 ms</output>
-            </div>
-            <p id="solve-info"></p>
 
+            <div class="paint">
+                <h2>Paint</h2>
+                <p class="hint">Pick a colour, then click a sticker. Drag the cube to rotate it.</p>
+                <div id="palette" aria-label="Paint colour"></div>
+            </div>
+        </section>
+
+        <div class="panels">
             <div id="error"></div>
+
+            <section class="card">
+                <h2>Cube</h2>
+                <div class="row">
+                    <button id="scramble-btn" type="button">Scramble</button>
+                    <button id="reset-btn" type="button">Reset</button>
+                </div>
+                <p id="scramble-moves"></p>
+            </section>
+
+            <section class="card">
+                <h2>Solve</h2>
+                <div class="row">
+                    <label for="method-select">Solver</label>
+                    <select id="method-select"></select>
+                    <button id="solve-btn" type="button">Solve</button>
+                </div>
+                <p id="solve-info"></p>
+            </section>
+
+            <section class="card">
+                <h2>Solution</h2>
+                <div id="solution"></div>
+                <div class="row">
+                    <button id="prev-btn" type="button">Previous</button>
+                    <span id="step"></span>
+                    <button id="next-btn" type="button">Next</button>
+                </div>
+                <div class="row">
+                    <label for="turn-time">Turn time</label>
+                    <input id="turn-time" type="range" min="0" max="1000" step="50" value="300">
+                    <output id="turn-time-value" for="turn-time">300 ms</output>
+                </div>
+            </section>
         </div>
-    </div>
+    </main>
     <script src="/static/app.js" defer></script>
 </body>
 </html>
