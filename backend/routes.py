@@ -1,13 +1,16 @@
+import time
+
 from fastapi import APIRouter, HTTPException, Query
 
 from backend.schemas import (
     ApplyRequest,
     ApplyResponse,
+    MethodInfo,
     ScrambleResponse,
     SolveRequest,
     SolveResponse,
 )
-from cube.solver import solve
+from backend.solvers import SolveFailed, available_solvers
 from cube.state import Cube, random_moves
 from cube.validation import find_errors
 
@@ -21,14 +24,31 @@ def health() -> dict[str, str]:
 
 @router.post("/solve")
 def solve_cube(request: SolveRequest) -> SolveResponse:
+    solvers = available_solvers()
+    if request.method not in solvers:
+        raise HTTPException(
+            status_code=422,
+            detail=[
+                f"Unknown method {request.method!r}. Choose from: {', '.join(solvers)}"
+            ],
+        )
+
     cube = Cube.from_string(request.cube)
     errors = find_errors(cube)
 
     if errors:
         raise HTTPException(status_code=422, detail=[error.value for error in errors])
 
-    moves = solve(cube)
-    return SolveResponse(moves=moves, length=len(moves))
+    solver = solvers[request.method]
+    start = time.perf_counter()
+    try:
+        moves = solver.solve(cube)
+    except SolveFailed as error:
+        raise HTTPException(status_code=422, detail=[str(error)]) from error
+    time_ms = (time.perf_counter() - start) * 1000
+    return SolveResponse(
+        moves=moves, length=len(moves), method=request.method, time_ms=round(time_ms, 2)
+    )
 
 
 @router.post("/apply")
@@ -50,3 +70,11 @@ def scramble_cube(
     cube = Cube.solved().apply_moves(moves)
 
     return ScrambleResponse(cube=cube.to_string(), moves=moves)
+
+
+@router.get("/methods")
+def methods() -> list[MethodInfo]:
+    return [
+        MethodInfo(name=solver.name, label=solver.label)
+        for solver in available_solvers().values()
+    ]
