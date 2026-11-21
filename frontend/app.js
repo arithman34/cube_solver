@@ -12,6 +12,8 @@ const error = document.getElementById("error");
 const prevBtn = document.getElementById("prev-btn");
 const nextBtn = document.getElementById("next-btn");
 const stepLabel = document.getElementById("step");
+const methodSelect = document.getElementById("method-select");
+const solveInfo = document.getElementById("solve-info");
 
 scrambleBtn.addEventListener("click", scramble);
 solveBtn.addEventListener("click", solve);
@@ -30,6 +32,7 @@ async function scramble() {
 
     renderCube(body.cube);
     scrambleMoves.textContent = body.moves.join(" ");
+    solveInfo.textContent = "";
     solution.textContent = "";
     error.textContent = "";
     moves = [];
@@ -37,30 +40,52 @@ async function scramble() {
     stepLabel.textContent = "";
 }
 
-async function solve() {
-    const response = await fetch("/api/solve", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cube: currentCube }),
-    });
+async function loadMethods() {
+    const response = await fetch("/api/methods");
     const body = await response.json();
 
-    if (!response.ok) {
-        solution.textContent = "";
-        error.textContent = errorMessage(body.detail);
-        return;
+    body.forEach((method) => {
+        const option = document.createElement("option");
+        option.value = method.name;
+        option.textContent = method.label;
+        methodSelect.append(option);
+    });
+}
+
+async function solve() {
+    solveBtn.disabled = true;
+    solveBtn.textContent = "Solving…";
+    try {
+        const response = await fetch("/api/solve", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ cube: currentCube, method: methodSelect.value }),
+        });
+        const body = await response.json();
+
+        if (!response.ok) {
+            solution.textContent = "";
+            solveInfo.textContent = "";
+            error.textContent = errorMessage(body.detail);
+            return;
+        }
+
+        error.textContent = "";
+        if (body.moves.length === 0) {
+            solution.textContent = "Already solved";
+            solveInfo.textContent = "";
+            return;
+        }
+
+        moves = body.moves;
+        step = 0;
+        solveInfo.textContent = `${body.length} moves in ${body.time_ms} ms`;
+
+        renderSolution();
+    } finally {
+        solveBtn.disabled = false;
+        solveBtn.textContent = "Solve";
     }
-
-    error.textContent = "";
-    if (body.moves.length === 0) {
-        solution.textContent = "Already solved";
-        return;
-    }
-
-    moves = body.moves;
-    step = 0;
-
-    renderSolution();
 }
 
 function errorMessage(detail) {
@@ -72,6 +97,7 @@ function errorMessage(detail) {
 
 function reset() {
     scrambleMoves.textContent = "";
+    solveInfo.textContent = "";
     solution.textContent = "";
     error.textContent = "";
     moves = [];
@@ -184,3 +210,4 @@ function renderSolution() {
 }
 
 renderCube(SOLVED);
+loadMethods();

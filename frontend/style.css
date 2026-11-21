@@ -96,7 +96,8 @@ h1 + p {
     gap: 8px;
 }
 
-button {
+button,
+select {
     font: inherit;
     font-size: 14px;
     padding: 6px 14px;
@@ -107,7 +108,8 @@ button {
     cursor: pointer;
 }
 
-button:hover {
+button:hover,
+select:hover {
     border-color: var(--text-muted);
 }
 
@@ -115,7 +117,18 @@ button:active {
     transform: scale(0.98);
 }
 
-button:focus-visible {
+button:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
+
+label {
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+button:focus-visible,
+select:focus-visible {
     outline: 2px solid var(--accent);
     outline-offset: 2px;
 }
@@ -140,6 +153,16 @@ button:focus-visible {
 }
 
 #scramble-moves:empty {
+    display: none;
+}
+
+#solve-info {
+    margin: 0;
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+#solve-info:empty {
     display: none;
 }
 
