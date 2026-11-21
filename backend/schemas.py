@@ -9,7 +9,7 @@ class CubeRequest(BaseModel):
 
 
 class SolveRequest(CubeRequest):
-    pass
+    method: str = "kociemba"
 
 
 class ApplyRequest(CubeRequest):
@@ -19,6 +19,8 @@ class ApplyRequest(CubeRequest):
 class SolveResponse(BaseModel):
     moves: list[str]
     length: int
+    method: str
+    time_ms: float
 
 
 class ScrambleResponse(BaseModel):
@@ -28,3 +30,8 @@ class ScrambleResponse(BaseModel):
 
 class ApplyResponse(BaseModel):
     cube: str
+
+
+class MethodInfo(BaseModel):
+    name: str
+    label: str

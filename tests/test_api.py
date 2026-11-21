@@ -1,7 +1,9 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from backend import routes
 from backend.main import app
+from backend.solvers import SolveFailed, Solver
 from cube.cubies import CORNER_FACELETS, EDGE_FACELETS
 from cube.state import Cube
 from cube.validation import CubeError
@@ -58,14 +60,56 @@ def test_health(client):
 
 def test_solve_solved_cube(client):
     response = client.post("/api/solve", json={"cube": SOLVED})
+    body = response.json()
     assert response.status_code == 200
-    assert response.json() == {"moves": [], "length": 0}
+    assert body["moves"] == []
+    assert body["length"] == 0
+    assert body["method"] == "kociemba"
 
 
 def test_solve_one_move(client):
     cube = Cube.solved().apply_move("R").to_string()
     response = client.post("/api/solve", json={"cube": cube})
-    assert response.json() == {"moves": ["R'"], "length": 1}
+    body = response.json()
+    assert body["moves"] == ["R'"]
+    assert body["length"] == 1
+    assert body["time_ms"] >= 0
+
+
+def test_solve_with_kociemba_by_name(client):
+    cube = Cube.solved().apply_moves(["R", "U"]).to_string()
+    response = client.post("/api/solve", json={"cube": cube, "method": "kociemba"})
+    body = response.json()
+    assert response.status_code == 200
+    assert body["moves"] == ["U'", "R'"]
+    assert body["method"] == "kociemba"
+
+
+def test_solve_with_unknown_method(client):
+    response = client.post("/api/solve", json={"cube": SOLVED, "method": "magic"})
+    assert response.status_code == 422
+    [message] = response.json()["detail"]
+    assert message.startswith("Unknown method 'magic'. Choose from: kociemba")
+
+
+def test_methods_lists_kociemba(client):
+    response = client.get("/api/methods")
+    assert response.status_code == 200
+    assert {"name": "kociemba", "label": "Kociemba (two-phase)"} in response.json()
+
+
+def test_solve_reports_a_failed_search(client, monkeypatch):
+    def give_up(cube):
+        raise SolveFailed("No solution found.")
+
+    stuck = Solver(name="stuck", label="Always gives up", solve=give_up)
+    monkeypatch.setattr(routes, "available_solvers", lambda: {"stuck": stuck})
+
+    cube = Cube.solved().apply_move("R").to_string()
+    response = client.post("/api/solve", json={"cube": cube, "method": "stuck"})
+
+    assert response.status_code == 422
+    assert response.json() == {"detail": ["No solution found."]}
 
 
 @pytest.mark.parametrize("seed", range(3))

@@ -6,6 +6,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.routes import router
+from backend.solvers import available_solvers
 from cube.solver.tables import get_tables
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
@@ -14,6 +15,7 @@ FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     get_tables()
+    available_solvers()
     yield
 
 
