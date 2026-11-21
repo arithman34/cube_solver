@@ -3,6 +3,28 @@ const SOLVED = "U".repeat(9) + "R".repeat(9) + "F".repeat(9) + "D".repeat(9) + "
 const DEFAULT_ROT_X = -25;
 const DEFAULT_ROT_Y = -35;
 const FACE_ORDER = ["U", "R", "F", "D", "L", "B"];
+const COORDS = [-1, 0, 1];
+const DEFAULT_TURN_MS = 300;
+const REDUCED_MOTION_TURN_MS = 150;
+const HALF_TURN_FACTOR = 1.5;
+
+const FACE_POSITIONS = {
+    U: (row, col) => [col, -1, row],
+    R: (row, col) => [1, row, -col],
+    F: (row, col) => [col, row, 1],
+    D: (row, col) => [col, 1, -row],
+    L: (row, col) => [-1, row, col],
+    B: (row, col) => [-col, row, -1],
+};
+
+const TURNS = {
+    U: { axis: "Y", coord: "y", side: -1, angle: -90 },
+    D: { axis: "Y", coord: "y", side: 1, angle: 90 },
+    R: { axis: "X", coord: "x", side: 1, angle: 90 },
+    L: { axis: "X", coord: "x", side: -1, angle: -90 },
+    F: { axis: "Z", coord: "z", side: 1, angle: 90 },
+    B: { axis: "Z", coord: "z", side: -1, angle: -90 },
+};
 
 const scrambleBtn = document.getElementById("scramble-btn");
 const solveBtn = document.getElementById("solve-btn");
@@ -18,12 +40,15 @@ const solveInfo = document.getElementById("solve-info");
 const scene = document.getElementById("cube-scene");
 const cube3d = document.getElementById("cube-3d");
 const palette = document.getElementById("palette");
+const turnTimeSlider = document.getElementById("turn-time");
+const turnTimeValue = document.getElementById("turn-time-value");
 
 scrambleBtn.addEventListener("click", scramble);
 solveBtn.addEventListener("click", solve);
 resetBtn.addEventListener("click", reset);
 prevBtn.addEventListener("click", previous);
 nextBtn.addEventListener("click", next);
+turnTimeSlider.addEventListener("input", showTurnTime);
 scene.addEventListener("pointerdown", onPointerDown);
 scene.addEventListener("pointermove", onPointerMove);
 scene.addEventListener("pointerup", onPointerUp);
@@ -84,6 +109,10 @@ function clearSolution() {
 }
 
 async function scramble() {
+    if (busy) {
+        return;
+    }
+
     const response = await fetch("/api/scramble");
     const body = await response.json();
 
@@ -105,6 +134,10 @@ async function loadMethods() {
 }
 
 async function solve() {
+    if (busy) {
+        return;
+    }
+
     solveBtn.disabled = true;
     solveBtn.textContent = "Solving…";
     try {
@@ -148,6 +181,10 @@ function errorMessage(detail) {
 }
 
 function reset() {
+    if (busy) {
+        return;
+    }
+
     scrambleMoves.textContent = "";
     clearSolution();
     renderCube(SOLVED);
@@ -167,8 +204,42 @@ async function applyMove(move) {
     }
 
     error.textContent = "";
-    renderCube(body.cube);
+    try {
+        await animateTurn(move);
+    } finally {
+        renderCube(body.cube);
+    }
     return true;
+}
+
+async function animateTurn(move) {
+    const turn = TURNS[move[0]];
+    let angle = turn.angle;
+    if (move.endsWith("'")) {
+        angle = -angle;
+    }
+    if (move.endsWith("2")) {
+        angle *= 2;
+    }
+
+    const layer = document.createElement("div");
+    layer.classList.add("layer");
+    for (const cubie of [...cube3d.children]) {
+        if (Number(cubie.dataset[turn.coord]) === turn.side) {
+            layer.append(cubie);
+        }
+    }
+    cube3d.append(layer);
+
+    let duration = Number(turnTimeSlider.value);
+    if (move.endsWith("2")) {
+        duration *= HALF_TURN_FACTOR;
+    }
+    const keyframes = [
+        { transform: `rotate${turn.axis}(0deg)` },
+        { transform: `rotate${turn.axis}(${angle}deg)` },
+    ];
+    await layer.animate(keyframes, { duration, easing: "ease-in-out", fill: "forwards" }).finished;
 }
 
 async function previous() {
@@ -217,28 +288,61 @@ function inverse(move) {
 
 function renderCube(cubeString) {
     currentCube = cubeString;
-    cube3d.innerHTML = "";
-    FACE_ORDER.forEach((letter, i) => {
-        cube3d.append(buildFace(letter, i, cubeString.slice(i * 9, i * 9 + 9)));
-    });
-}
 
-function buildFace(letter, faceIndex, stickers) {
-    const face = document.createElement("div");
-    face.classList.add("face", `face-${letter}`);
-
-    for (let j = 0; j < stickers.length; j++) {
-        const sticker = document.createElement("div");
-        sticker.classList.add("sticker");
-        sticker.style.backgroundColor = COLORS[stickers[j]];
-        sticker.dataset.index = faceIndex * 9 + j;
-        if (j === 4) {
-            sticker.classList.add("center");
+    const cubies = new Map();
+    for (const x of COORDS) {
+        for (const y of COORDS) {
+            for (const z of COORDS) {
+                cubies.set(`${x},${y},${z}`, buildCubie(x, y, z));
+            }
         }
-        face.append(sticker);
     }
 
-    return face;
+    for (let index = 0; index < cubeString.length; index++) {
+        const letter = FACE_ORDER[Math.floor(index / 9)];
+        const [x, y, z] = stickerPosition(index);
+        const plane = cubies.get(`${x},${y},${z}`).querySelector(`.face-${letter}`);
+        plane.append(buildSticker(index, cubeString[index]));
+    }
+
+    cube3d.replaceChildren(...cubies.values());
+}
+
+function stickerPosition(index) {
+    const letter = FACE_ORDER[Math.floor(index / 9)];
+    const row = Math.floor((index % 9) / 3) - 1;
+    const col = (index % 3) - 1;
+    return FACE_POSITIONS[letter](row, col);
+}
+
+function buildCubie(x, y, z) {
+    const cubie = document.createElement("div");
+    cubie.classList.add("cubie");
+    cubie.dataset.x = x;
+    cubie.dataset.y = y;
+    cubie.dataset.z = z;
+    cubie.style.setProperty("--x", x);
+    cubie.style.setProperty("--y", y);
+    cubie.style.setProperty("--z", z);
+
+    FACE_ORDER.forEach((letter) => {
+        const plane = document.createElement("div");
+        plane.classList.add("cubie-face", `face-${letter}`);
+        cubie.append(plane);
+    });
+
+    return cubie;
+}
+
+function buildSticker(index, letter) {
+    const sticker = document.createElement("div");
+    sticker.classList.add("sticker");
+    sticker.style.backgroundColor = COLORS[letter];
+    sticker.dataset.index = index;
+    if (index % 9 === 4) {
+        sticker.classList.add("center");
+    }
+    return sticker;
 }
 
 function applyRotation() {
@@ -298,6 +402,16 @@ function renderSolution() {
     stepLabel.textContent = `Step ${step} of ${moves.length}`;
 }
 
+function setDefaultTurnTime() {
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    turnTimeSlider.value = reducedMotion ? REDUCED_MOTION_TURN_MS : DEFAULT_TURN_MS;
+    showTurnTime();
+}
+
+function showTurnTime() {
+    turnTimeValue.textContent = `${turnTimeSlider.value} ms`;
+}
+
 function clamp(value, min, max) {
     return Math.max(min, Math.min(value, max));
 }
@@ -306,4 +420,5 @@ renderCube(SOLVED);
 applyRotation();
 buildPalette();
 selectColor(brush);
+setDefaultTurnTime();
 loadMethods();
