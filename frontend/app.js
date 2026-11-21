@@ -17,6 +17,7 @@ const methodSelect = document.getElementById("method-select");
 const solveInfo = document.getElementById("solve-info");
 const scene = document.getElementById("cube-scene");
 const cube3d = document.getElementById("cube-3d");
+const palette = document.getElementById("palette");
 
 scrambleBtn.addEventListener("click", scramble);
 solveBtn.addEventListener("click", solve);
@@ -37,6 +38,50 @@ let rotY = DEFAULT_ROT_Y;
 let dragging = false;
 let lastX = 0;
 let lastY = 0;
+let brush = "U";
+let downTarget = null;
+let startX = 0;
+let startY = 0;
+
+function buildPalette() {
+    FACE_ORDER.forEach((letter) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.classList.add("color-btn");
+        button.dataset.color = letter;
+        button.style.backgroundColor = COLORS[letter];
+        button.setAttribute("aria-label", `Paint with the ${letter} face colour`);
+        button.addEventListener("click", () => selectColor(letter));
+        palette.append(button);
+    });
+}
+
+function selectColor(letter) {
+    brush = letter;
+    for (const button of palette.children) {
+        button.classList.toggle("selected", button.dataset.color === letter);
+    }
+}
+
+function paintSticker(index) {
+    if (busy || solveBtn.disabled || index % 9 === 4) {
+        return;
+    }
+
+    const cubeString = currentCube.substring(0, index) + brush + currentCube.substring(index + 1);
+    renderCube(cubeString);
+    scrambleMoves.textContent = "";
+    clearSolution();
+}
+
+function clearSolution() {
+    solveInfo.textContent = "";
+    solution.textContent = "";
+    error.textContent = "";
+    moves = [];
+    step = 0;
+    stepLabel.textContent = "";
+}
 
 async function scramble() {
     const response = await fetch("/api/scramble");
@@ -44,12 +89,7 @@ async function scramble() {
 
     renderCube(body.cube);
     scrambleMoves.textContent = body.moves.join(" ");
-    solveInfo.textContent = "";
-    solution.textContent = "";
-    error.textContent = "";
-    moves = [];
-    step = 0;
-    stepLabel.textContent = "";
+    clearSolution();
 }
 
 async function loadMethods() {
@@ -109,13 +149,7 @@ function errorMessage(detail) {
 
 function reset() {
     scrambleMoves.textContent = "";
-    solveInfo.textContent = "";
-    solution.textContent = "";
-    error.textContent = "";
-    moves = [];
-    step = 0;
-    stepLabel.textContent = "";
-
+    clearSolution();
     renderCube(SOLVED);
 }
 
@@ -185,18 +219,22 @@ function renderCube(cubeString) {
     currentCube = cubeString;
     cube3d.innerHTML = "";
     FACE_ORDER.forEach((letter, i) => {
-        cube3d.append(buildFace(letter, cubeString.slice(i * 9, i * 9 + 9)));
+        cube3d.append(buildFace(letter, i, cubeString.slice(i * 9, i * 9 + 9)));
     });
 }
 
-function buildFace(letter, stickers) {
+function buildFace(letter, faceIndex, stickers) {
     const face = document.createElement("div");
     face.classList.add("face", `face-${letter}`);
 
-    for (const color of stickers) {
+    for (let j = 0; j < stickers.length; j++) {
         const sticker = document.createElement("div");
         sticker.classList.add("sticker");
-        sticker.style.backgroundColor = COLORS[color];
+        sticker.style.backgroundColor = COLORS[stickers[j]];
+        sticker.dataset.index = faceIndex * 9 + j;
+        if (j === 4) {
+            sticker.classList.add("center");
+        }
         face.append(sticker);
     }
 
@@ -209,8 +247,9 @@ function applyRotation() {
 
 function onPointerDown(event) {
     dragging = true;
-    lastX = event.clientX;
-    lastY = event.clientY;
+    downTarget = event.target;
+    startX = lastX = event.clientX;
+    startY = lastY = event.clientY;
     scene.setPointerCapture(event.pointerId);
 }
 
@@ -227,8 +266,14 @@ function onPointerMove(event) {
     applyRotation();
 }
 
-function onPointerUp() {
+function onPointerUp(event) {
     dragging = false;
+
+    const distance = Math.hypot(event.clientX - startX, event.clientY - startY);
+    if (event.type === "pointerup" && distance < 5 && downTarget.dataset.index !== undefined) {
+        paintSticker(Number(downTarget.dataset.index));
+    }
+    downTarget = null;
 }
 
 function renderSolution() {
@@ -259,4 +304,6 @@ function clamp(value, min, max) {
 
 renderCube(SOLVED);
 applyRotation();
+buildPalette();
+selectColor(brush);
 loadMethods();
