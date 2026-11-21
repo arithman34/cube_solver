@@ -1,8 +1,9 @@
 const COLORS = {"U": "#ffffff", "R": "#d62d2d", "F": "#2a9d4a", "D": "#f5d021", "L": "#f2841c", "B": "#2463c9"};
-const FACE_OFFSETS = [[0, 3], [3, 6], [3, 3], [6, 3], [3, 0], [3, 9]];
 const SOLVED = "U".repeat(9) + "R".repeat(9) + "F".repeat(9) + "D".repeat(9) + "L".repeat(9) + "B".repeat(9);
+const DEFAULT_ROT_X = -25;
+const DEFAULT_ROT_Y = -35;
+const FACE_ORDER = ["U", "R", "F", "D", "L", "B"];
 
-const net = document.getElementById("cube-net");
 const scrambleBtn = document.getElementById("scramble-btn");
 const solveBtn = document.getElementById("solve-btn");
 const resetBtn = document.getElementById("reset-btn");
@@ -14,17 +15,28 @@ const nextBtn = document.getElementById("next-btn");
 const stepLabel = document.getElementById("step");
 const methodSelect = document.getElementById("method-select");
 const solveInfo = document.getElementById("solve-info");
+const scene = document.getElementById("cube-scene");
+const cube3d = document.getElementById("cube-3d");
 
 scrambleBtn.addEventListener("click", scramble);
 solveBtn.addEventListener("click", solve);
 resetBtn.addEventListener("click", reset);
 prevBtn.addEventListener("click", previous);
 nextBtn.addEventListener("click", next);
+scene.addEventListener("pointerdown", onPointerDown);
+scene.addEventListener("pointermove", onPointerMove);
+scene.addEventListener("pointerup", onPointerUp);
+scene.addEventListener("pointercancel", onPointerUp);
 
 let currentCube = SOLVED;
 let moves = [];
 let step = 0;
 let busy = false;
+let rotX = DEFAULT_ROT_X;
+let rotY = DEFAULT_ROT_Y;
+let dragging = false;
+let lastX = 0;
+let lastY = 0;
 
 async function scramble() {
     const response = await fetch("/api/scramble");
@@ -170,26 +182,58 @@ function inverse(move) {
 }
 
 function renderCube(cubeString) {
-    net.innerHTML = "";
     currentCube = cubeString;
-    for (let i = 0; i < 54; i++) {
-        const face = Math.floor(i / 9);
-        const row = Math.floor((i % 9) / 3);
-        const col = i % 3;
-        
+    cube3d.innerHTML = "";
+    FACE_ORDER.forEach((letter, i) => {
+        cube3d.append(buildFace(letter, cubeString.slice(i * 9, i * 9 + 9)));
+    });
+}
+
+function buildFace(letter, stickers) {
+    const face = document.createElement("div");
+    face.classList.add("face", `face-${letter}`);
+
+    for (const color of stickers) {
         const sticker = document.createElement("div");
         sticker.classList.add("sticker");
-        sticker.style.backgroundColor = COLORS[cubeString[i]];
-        sticker.style.gridRow = FACE_OFFSETS[face][0] + row + 1;
-        sticker.style.gridColumn = FACE_OFFSETS[face][1] + col + 1;
-
-        net.append(sticker);
+        sticker.style.backgroundColor = COLORS[color];
+        face.append(sticker);
     }
+
+    return face;
+}
+
+function applyRotation() {
+    cube3d.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+}
+
+function onPointerDown(event) {
+    dragging = true;
+    lastX = event.clientX;
+    lastY = event.clientY;
+    scene.setPointerCapture(event.pointerId);
+}
+
+function onPointerMove(event) {
+    if (!dragging) {
+        return;
+    }
+
+    rotY += (event.clientX - lastX) * 0.5;
+    rotX = clamp(rotX - (event.clientY - lastY) * 0.5, -90, 90);
+    lastX = event.clientX;
+    lastY = event.clientY;
+
+    applyRotation();
+}
+
+function onPointerUp() {
+    dragging = false;
 }
 
 function renderSolution() {
     solution.textContent = "";
-    
+
     for (let i = 0; i < moves.length; i++) {
         const chip = document.createElement("span");
         chip.classList.add("chip");
@@ -209,5 +253,10 @@ function renderSolution() {
     stepLabel.textContent = `Step ${step} of ${moves.length}`;
 }
 
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(value, max));
+}
+
 renderCube(SOLVED);
+applyRotation();
 loadMethods();
