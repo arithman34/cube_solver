@@ -31,6 +31,15 @@ def test_home_page_is_served(client):
     assert 'id="cube-3d"' in response.text
 
 
+def test_home_page_has_turn_time_slider(client):
+    page = client.get("/").text
+    assert (
+        '<input id="turn-time" type="range" min="0" max="1000" step="50" value="300">'
+        in page
+    )
+    assert '<label for="turn-time">Turn time</label>' in page
+
+
 def test_home_page_links_static_files(client):
     page = client.get("/").text
     assert 'href="/static/style.css"' in page

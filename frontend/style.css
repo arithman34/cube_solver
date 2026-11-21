@@ -11,7 +11,8 @@
     --sticker-gap: 4px;
     --radius: 8px;
     --sticker-3d: 44px;
-    --face-size: calc(3 * var(--sticker-3d) + 4 * var(--sticker-gap));
+    --cubie: calc(var(--sticker-3d) + var(--sticker-gap));
+    --face-size: calc(3 * var(--cubie));
     --cube-plastic: #111111;
 }
 
@@ -77,11 +78,11 @@ h1 + p {
     border: 1px solid rgba(0, 0, 0, 0.35);
 }
 
-.face .sticker:not(.center) {
+.sticker:not(.center) {
     cursor: pointer;
 }
 
-.face .sticker:not(.center):hover {
+.sticker:not(.center):hover {
     filter: brightness(0.85);
 }
 
@@ -134,41 +135,61 @@ h1 + p {
     transform-style: preserve-3d;
 }
 
-.face {
+.layer {
     position: absolute;
     inset: 0;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    grid-template-rows: repeat(3, 1fr);
-    gap: var(--sticker-gap);
-    padding: var(--sticker-gap);
+    transform-style: preserve-3d;
+}
+
+.cubie {
+    position: absolute;
+    top: calc(50% - var(--cubie) / 2);
+    left: calc(50% - var(--cubie) / 2);
+    width: var(--cubie);
+    height: var(--cubie);
+    transform-style: preserve-3d;
+    transform: translate3d(
+        calc(var(--x) * var(--cubie)),
+        calc(var(--y) * var(--cubie)),
+        calc(var(--z) * var(--cubie))
+    );
+}
+
+.cubie-face {
+    position: absolute;
+    inset: 0;
+    padding: calc(var(--sticker-gap) / 2);
     background: var(--cube-plastic);
-    border-radius: 8px;
     backface-visibility: hidden;
 }
 
+.cubie-face .sticker {
+    width: 100%;
+    height: 100%;
+}
+
 .face-U {
-    transform: rotateX(90deg) translateZ(calc(var(--face-size) / 2));
+    transform: rotateX(90deg) translateZ(calc(var(--cubie) / 2));
 }
 
 .face-R {
-    transform: rotateY(90deg) translateZ(calc(var(--face-size) / 2));
+    transform: rotateY(90deg) translateZ(calc(var(--cubie) / 2));
 }
 
 .face-F {
-    transform: translateZ(calc(var(--face-size) / 2));
+    transform: translateZ(calc(var(--cubie) / 2));
 }
 
 .face-D {
-    transform: rotateX(-90deg) translateZ(calc(var(--face-size) / 2));
+    transform: rotateX(-90deg) translateZ(calc(var(--cubie) / 2));
 }
 
 .face-L {
-    transform: rotateY(-90deg) translateZ(calc(var(--face-size) / 2));
+    transform: rotateY(-90deg) translateZ(calc(var(--cubie) / 2));
 }
 
 .face-B {
-    transform: rotateY(180deg) translateZ(calc(var(--face-size) / 2));
+    transform: rotateY(180deg) translateZ(calc(var(--cubie) / 2));
 }
 
 .layout > div:last-child {
@@ -289,6 +310,17 @@ select:focus-visible {
 #step {
     min-width: 96px;
     text-align: center;
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+#turn-time {
+    width: 160px;
+    accent-color: var(--accent);
+}
+
+#turn-time-value {
+    min-width: 64px;
     font-size: 14px;
     color: var(--text-muted);
 }
