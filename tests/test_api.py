@@ -28,7 +28,7 @@ def test_home_page_is_served(client):
     response = client.get("/")
     assert response.status_code == 200
     assert response.headers["content-type"].startswith("text/html")
-    assert 'id="cube-net"' in response.text
+    assert 'id="cube-3d"' in response.text
 
 
 def test_home_page_links_static_files(client):
