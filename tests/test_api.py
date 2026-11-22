@@ -104,11 +104,41 @@ def test_solve_with_unknown_method(client):
 def test_methods_lists_kociemba(client):
     response = client.get("/api/methods")
     assert response.status_code == 200
-    assert {"name": "kociemba", "label": "Kociemba (two-phase)"} in response.json()
+    assert {
+        "name": "kociemba",
+        "label": "Kociemba (two-phase)",
+        "uses_time_limit": True,
+    } in response.json()
+
+
+def test_solve_passes_the_time_limit_to_the_solver(client, monkeypatch):
+    limits = []
+
+    def record(cube, time_limit):
+        limits.append(time_limit)
+        return []
+
+    recorder = Solver(name="recorder", label="Records the limit", solve=record)
+    monkeypatch.setattr(routes, "available_solvers", lambda: {"recorder": recorder})
+
+    client.post("/api/solve", json={"cube": SOLVED, "method": "recorder"})
+    client.post(
+        "/api/solve", json={"cube": SOLVED, "method": "recorder", "time_limit": 2.5}
+    )
+
+    assert limits == [1.0, 2.5]
+
+
+@pytest.mark.parametrize("time_limit", [-1, 11])
+def test_solve_rejects_time_limit_out_of_range(client, time_limit):
+    response = client.post(
+        "/api/solve", json={"cube": SOLVED, "time_limit": time_limit}
+    )
+    assert response.status_code == 422
 
 
 def test_solve_reports_a_failed_search(client, monkeypatch):
-    def give_up(cube):
+    def give_up(cube, time_limit):
         raise SolveFailed("No solution found.")
 
     stuck = Solver(name="stuck", label="Always gives up", solve=give_up)

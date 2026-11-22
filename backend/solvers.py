@@ -26,13 +26,22 @@ class SolveFailed(Exception): ...
 
 @dataclass
 class Solver:
+    """solve takes the cube and a time limit in seconds. Solvers with
+    uses_time_limit False ignore the limit."""
+
     name: str
     label: str
-    solve: Callable[[Cube], list[str]]
+    solve: Callable[[Cube, float], list[str]]
+    uses_time_limit: bool = False
 
 
 def kociemba_solver() -> Solver:
-    return Solver(name="kociemba", label="Kociemba (two-phase)", solve=solve)
+    return Solver(
+        name="kociemba",
+        label="Kociemba (two-phase)",
+        solve=solve,
+        uses_time_limit=True,
+    )
 
 
 def neural_solver(path: Path, beam_width: int = 300) -> Solver:
@@ -55,7 +64,7 @@ def neural_solver(path: Path, beam_width: int = 300) -> Solver:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = load_checkpoint(path, device)
 
-    def solve_with_beam(cube: Cube) -> list[str]:
+    def solve_with_beam(cube: Cube, time_limit: float = 0) -> list[str]:
         result = beam_search(model, cube, device, beam_width)
         if not result.solved:
             raise SolveFailed(

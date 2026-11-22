@@ -355,12 +355,19 @@ select:focus-visible {
     color: var(--text-muted);
 }
 
-#turn-time {
+#turn-time,
+#thinking-time {
     width: 160px;
     accent-color: var(--accent);
 }
 
-#turn-time-value {
+#thinking-time:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#turn-time-value,
+#thinking-time-value {
     min-width: 64px;
     font-size: 14px;
     color: var(--text-muted);
