@@ -40,6 +40,18 @@ def test_home_page_has_turn_time_slider(client):
     assert '<label for="turn-time">Turn time</label>' in page
 
 
+def test_home_page_has_scramble_step_buttons(client):
+    page = client.get("/").text
+    assert '<div id="scramble-stepper" class="row" hidden>' in page
+    for button in [
+        '<button id="scramble-prev-btn" type="button">Previous</button>',
+        '<button id="scramble-next-btn" type="button">Next</button>',
+        '<button id="scramble-play-btn" type="button">Play</button>',
+        '<button id="play-btn" type="button">Play</button>',
+    ]:
+        assert button in page
+
+
 def test_home_page_links_static_files(client):
     page = client.get("/").text
     assert 'href="/static/style.css"' in page
