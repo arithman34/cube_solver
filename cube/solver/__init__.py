@@ -1,32 +1,44 @@
+import time
+
 from cube.cubies import CubieCube
-from cube.solver.search import search_phase_1, search_phase_2
+from cube.solver.search import phase_1_solutions, search_phase_2
 from cube.state import Cube
 from cube.validation import is_solvable
 
-_QUARTER_TURNS = {"": 1, "2": 2, "'": 3}
-_SUFFIXES = {1: "", 2: "2", 3: "'"}
+MAX_PHASE_2_BUDGET = 10
+DEFAULT_TIME_LIMIT = 1.0
 
 
-def solve(cube: Cube) -> list[str]:
-    """Moves that solve cube. Empty for a solved cube. Raises ValueError if the cube is not solvable."""
+def solve(cube: Cube, time_limit: float = DEFAULT_TIME_LIMIT) -> list[str]:
+    """Moves that solve cube, as short as can be found within time_limit seconds.
+    Always returns a solution, even if finding the first one takes longer.
+    Empty for a solved cube. Raises ValueError if the cube is not solvable."""
     if not is_solvable(cube):
         raise ValueError("Cube is not solvable.")
 
+    deadline = time.perf_counter() + time_limit
     cubies = CubieCube.from_stickers(cube.stickers)
+    best: list[str] | None = None
 
-    phase_1 = search_phase_1(cubies)
+    for phase_1 in phase_1_solutions(cubies):
+        if best is not None:
+            if len(phase_1) >= len(best) or time.perf_counter() > deadline:
+                break
+            budget = min(MAX_PHASE_2_BUDGET, len(best) - len(phase_1) - 1)
+        else:
+            budget = MAX_PHASE_2_BUDGET
 
-    for move in phase_1:
-        cubies = cubies.apply_move(move)
+        in_phase_2 = cubies
+        for move in phase_1:
+            in_phase_2 = in_phase_2.apply_move(move)
 
-    phase_2 = search_phase_2(cubies)
+        previous = phase_1[-1] if phase_1 else None
+        try:
+            phase_2 = search_phase_2(in_phase_2, max_depth=budget, previous=previous)
+        except ValueError:
+            continue
+        best = phase_1 + phase_2
 
-    while phase_1 and phase_2 and phase_1[-1][0] == phase_2[0][0]:
-        last_move, first_move = phase_1.pop(), phase_2.pop(0)
-        face = last_move[0]
-        turns = (_QUARTER_TURNS[last_move[1:]] + _QUARTER_TURNS[first_move[1:]]) % 4
-        if turns != 0:
-            phase_1.append(face + _SUFFIXES[turns])
-            break
-
-    return phase_1 + phase_2
+    if best is None:
+        raise ValueError("No solution found.")
+    return best

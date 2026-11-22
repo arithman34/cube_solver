@@ -1,4 +1,4 @@
-from itertools import pairwise
+from itertools import islice, pairwise
 
 import pytest
 
@@ -11,6 +11,7 @@ from cube.solver.search import (
     PHASE_2_MOVES,
     _allowed,
     phase_1_heuristic,
+    phase_1_solutions,
     phase_2_heuristic,
     search_phase_1,
     search_phase_2,
@@ -96,6 +97,20 @@ def test_phase_1_gives_up_past_max_depth():
         search_phase_1(_cubies("R U F"), max_depth=2)
 
 
+def test_phase_1_solutions_come_shortest_first():
+    cubies = _cubies("R U F")
+    solutions = list(islice(phase_1_solutions(cubies), 40))
+
+    assert solutions[0] == search_phase_1(cubies)
+    assert [len(s) for s in solutions] == sorted(len(s) for s in solutions)
+    for moves in solutions:
+        assert moves[-1] not in PHASE_2_MOVES
+        reached = cubies
+        for move in moves:
+            reached = reached.apply_move(move)
+        assert (get_twist(reached), get_flip(reached), get_slice(reached)) == (0, 0, 0)
+
+
 def test_phase_2_on_solved_cube_is_empty():
     assert search_phase_2(CubieCube.solved()) == []
 
@@ -117,6 +132,24 @@ def test_phase_2_only_uses_phase_2_moves():
     moves = search_phase_2(_cubies("R2 U F2 D' L2 B2 U2 D R2 U'"))
     assert set(moves) <= set(PHASE_2_MOVES)
     assert _no_wasted_moves(moves)
+
+
+def test_phase_2_does_not_start_on_the_previous_face():
+    assert search_phase_2(_cubies("U R2 D F2"), previous="F") == [
+        "L2",
+        "U'",
+        "D",
+        "F2",
+        "R2",
+        "D'",
+        "B2",
+        "D'",
+    ]
+
+
+def test_phase_2_gives_up_past_max_depth():
+    with pytest.raises(ValueError):
+        search_phase_2(_cubies("R2 U"), max_depth=1)
 
 
 def test_phase_2_rejects_cube_not_in_phase_2():
@@ -147,11 +180,26 @@ def test_solve_short_scrambles_exactly(moves, expected):
 @pytest.mark.parametrize("seed", range(10))
 def test_solve_scrambled_cube(seed):
     cube = Cube.scramble(30, seed=seed)
-    moves = solve(cube)
+    moves = solve(cube, time_limit=0.2)
     assert cube.apply_moves(moves).is_solved()
     assert set(moves) <= set(MOVE_NAMES)
     assert all(a[0] != b[0] for a, b in pairwise(moves))
-    assert len(moves) <= 30
+    assert len(moves) <= 22
+
+
+def test_first_solution_is_already_short():
+    lengths = [
+        len(solve(Cube.scramble(30, seed=seed), time_limit=0)) for seed in range(5)
+    ]
+    assert lengths == [20, 21, 21, 21, 22]
+
+
+def test_more_time_never_gives_a_longer_solution():
+    cube = Cube.scramble(30, seed=4)
+    quick = solve(cube, time_limit=0)
+    longer = solve(cube, time_limit=0.5)
+    assert cube.apply_moves(longer).is_solved()
+    assert len(longer) <= len(quick)
 
 
 def test_solve_rejects_unsolvable_cube():
