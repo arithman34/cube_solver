@@ -1,5 +1,7 @@
 from pydantic import BaseModel, Field
 
+MAX_TIME_LIMIT = 10.0
+
 
 class CubeRequest(BaseModel):
     cube: str = Field(
@@ -10,6 +12,7 @@ class CubeRequest(BaseModel):
 
 class SolveRequest(CubeRequest):
     method: str = "kociemba"
+    time_limit: float = Field(1.0, ge=0, le=MAX_TIME_LIMIT)
 
 
 class ApplyRequest(CubeRequest):
@@ -35,3 +38,4 @@ class ApplyResponse(BaseModel):
 class MethodInfo(BaseModel):
     name: str
     label: str
+    uses_time_limit: bool

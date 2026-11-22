@@ -42,7 +42,7 @@ def solve_cube(request: SolveRequest) -> SolveResponse:
     solver = solvers[request.method]
     start = time.perf_counter()
     try:
-        moves = solver.solve(cube)
+        moves = solver.solve(cube, request.time_limit)
     except SolveFailed as error:
         raise HTTPException(status_code=422, detail=[str(error)]) from error
     time_ms = (time.perf_counter() - start) * 1000
@@ -75,6 +75,10 @@ def scramble_cube(
 @router.get("/methods")
 def methods() -> list[MethodInfo]:
     return [
-        MethodInfo(name=solver.name, label=solver.label)
+        MethodInfo(
+            name=solver.name,
+            label=solver.label,
+            uses_time_limit=solver.uses_time_limit,
+        )
         for solver in available_solvers().values()
     ]

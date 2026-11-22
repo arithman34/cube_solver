@@ -42,6 +42,8 @@ const cube3d = document.getElementById("cube-3d");
 const palette = document.getElementById("palette");
 const turnTimeSlider = document.getElementById("turn-time");
 const turnTimeValue = document.getElementById("turn-time-value");
+const thinkingTimeSlider = document.getElementById("thinking-time");
+const thinkingTimeValue = document.getElementById("thinking-time-value");
 
 scrambleBtn.addEventListener("click", scramble);
 solveBtn.addEventListener("click", solve);
@@ -49,6 +51,8 @@ resetBtn.addEventListener("click", reset);
 prevBtn.addEventListener("click", previous);
 nextBtn.addEventListener("click", next);
 turnTimeSlider.addEventListener("input", showTurnTime);
+thinkingTimeSlider.addEventListener("input", showThinkingTime);
+methodSelect.addEventListener("change", updateThinkingTime);
 scene.addEventListener("pointerdown", onPointerDown);
 scene.addEventListener("pointermove", onPointerMove);
 scene.addEventListener("pointerup", onPointerUp);
@@ -67,6 +71,7 @@ let brush = "U";
 let downTarget = null;
 let startX = 0;
 let startY = 0;
+let usesTimeLimit = {};
 
 function buildPalette() {
     FACE_ORDER.forEach((letter) => {
@@ -130,7 +135,18 @@ async function loadMethods() {
         option.value = method.name;
         option.textContent = method.label;
         methodSelect.append(option);
+        usesTimeLimit[method.name] = method.uses_time_limit;
     });
+
+    updateThinkingTime();
+}
+
+function updateThinkingTime() {
+    thinkingTimeSlider.disabled = !usesTimeLimit[methodSelect.value];
+}
+
+function showThinkingTime() {
+    thinkingTimeValue.textContent = `${Number(thinkingTimeSlider.value).toFixed(1)} s`;
 }
 
 async function solve() {
@@ -144,7 +160,11 @@ async function solve() {
         const response = await fetch("/api/solve", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ cube: currentCube, method: methodSelect.value }),
+            body: JSON.stringify({
+                cube: currentCube,
+                method: methodSelect.value,
+                time_limit: Number(thinkingTimeSlider.value),
+            }),
         });
         const body = await response.json();
 
@@ -421,4 +441,5 @@ applyRotation();
 buildPalette();
 selectColor(brush);
 setDefaultTurnTime();
+showThinkingTime();
 loadMethods();
