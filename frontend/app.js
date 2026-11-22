@@ -34,7 +34,13 @@ const solution = document.getElementById("solution");
 const error = document.getElementById("error");
 const prevBtn = document.getElementById("prev-btn");
 const nextBtn = document.getElementById("next-btn");
+const playBtn = document.getElementById("play-btn");
 const stepLabel = document.getElementById("step");
+const scrambleStepper = document.getElementById("scramble-stepper");
+const scramblePrevBtn = document.getElementById("scramble-prev-btn");
+const scrambleNextBtn = document.getElementById("scramble-next-btn");
+const scramblePlayBtn = document.getElementById("scramble-play-btn");
+const scrambleStepLabel = document.getElementById("scramble-step");
 const methodSelect = document.getElementById("method-select");
 const solveInfo = document.getElementById("solve-info");
 const scene = document.getElementById("cube-scene");
@@ -45,11 +51,39 @@ const turnTimeValue = document.getElementById("turn-time-value");
 const thinkingTimeSlider = document.getElementById("thinking-time");
 const thinkingTimeValue = document.getElementById("thinking-time-value");
 
+const scrambleSteps = {
+    moves: [],
+    step: 0,
+    locked: false,
+    chips: scrambleMoves,
+    label: scrambleStepLabel,
+    stepper: scrambleStepper,
+    prevBtn: scramblePrevBtn,
+    nextBtn: scrambleNextBtn,
+    playBtn: scramblePlayBtn,
+};
+
+const solutionSteps = {
+    moves: [],
+    step: 0,
+    locked: false,
+    chips: solution,
+    label: stepLabel,
+    stepper: null,
+    prevBtn: prevBtn,
+    nextBtn: nextBtn,
+    playBtn: playBtn,
+};
+
 scrambleBtn.addEventListener("click", scramble);
 solveBtn.addEventListener("click", solve);
 resetBtn.addEventListener("click", reset);
-prevBtn.addEventListener("click", previous);
-nextBtn.addEventListener("click", next);
+prevBtn.addEventListener("click", () => previous(solutionSteps));
+nextBtn.addEventListener("click", () => next(solutionSteps));
+playBtn.addEventListener("click", () => togglePlay(solutionSteps));
+scramblePrevBtn.addEventListener("click", () => previous(scrambleSteps));
+scrambleNextBtn.addEventListener("click", () => next(scrambleSteps));
+scramblePlayBtn.addEventListener("click", () => togglePlay(scrambleSteps));
 turnTimeSlider.addEventListener("input", showTurnTime);
 thinkingTimeSlider.addEventListener("input", showThinkingTime);
 methodSelect.addEventListener("change", updateThinkingTime);
@@ -59,9 +93,8 @@ scene.addEventListener("pointerup", onPointerUp);
 scene.addEventListener("pointercancel", onPointerUp);
 
 let currentCube = SOLVED;
-let moves = [];
-let step = 0;
 let busy = false;
+let playing = null;
 let rotX = DEFAULT_ROT_X;
 let rotY = DEFAULT_ROT_Y;
 let dragging = false;
@@ -94,36 +127,46 @@ function selectColor(letter) {
 }
 
 function paintSticker(index) {
-    if (busy || solveBtn.disabled || index % 9 === 4) {
+    if (isBusy() || index % 9 === 4) {
         return;
     }
 
     const cubeString = currentCube.substring(0, index) + brush + currentCube.substring(index + 1);
     renderCube(cubeString);
-    scrambleMoves.textContent = "";
+    clearSteps(scrambleSteps);
     clearSolution();
+}
+
+function isBusy() {
+    return busy || playing !== null || solveBtn.disabled;
 }
 
 function clearSolution() {
     solveInfo.textContent = "";
-    solution.textContent = "";
     error.textContent = "";
-    moves = [];
-    step = 0;
-    stepLabel.textContent = "";
+    clearSteps(solutionSteps);
 }
 
 async function scramble() {
-    if (busy) {
+    if (isBusy()) {
         return;
     }
 
-    const response = await fetch("/api/scramble");
-    const body = await response.json();
+    busy = true;
+    scrambleBtn.disabled = true;
+    try {
+        const response = await fetch("/api/scramble");
+        const body = await response.json();
 
-    renderCube(body.cube);
-    scrambleMoves.textContent = body.moves.join(" ");
-    clearSolution();
+        clearSolution();
+        renderCube(SOLVED);
+        setSteps(scrambleSteps, body.moves);
+    } finally {
+        busy = false;
+        scrambleBtn.disabled = false;
+    }
+
+    await togglePlay(scrambleSteps);
 }
 
 async function loadMethods() {
@@ -150,7 +193,7 @@ function showThinkingTime() {
 }
 
 async function solve() {
-    if (busy) {
+    if (isBusy()) {
         return;
     }
 
@@ -168,25 +211,20 @@ async function solve() {
         });
         const body = await response.json();
 
+        clearSolution();
         if (!response.ok) {
-            solution.textContent = "";
-            solveInfo.textContent = "";
             error.textContent = errorMessage(body.detail);
             return;
         }
 
-        error.textContent = "";
         if (body.moves.length === 0) {
             solution.textContent = "Already solved";
-            solveInfo.textContent = "";
             return;
         }
 
-        moves = body.moves;
-        step = 0;
         solveInfo.textContent = `${body.length} moves in ${body.time_ms} ms`;
-
-        renderSolution();
+        setSteps(solutionSteps, body.moves);
+        lockSteps(scrambleSteps);
     } finally {
         solveBtn.disabled = false;
         solveBtn.textContent = "Solve";
@@ -201,16 +239,16 @@ function errorMessage(detail) {
 }
 
 function reset() {
-    if (busy) {
+    if (isBusy()) {
         return;
     }
 
-    scrambleMoves.textContent = "";
+    clearSteps(scrambleSteps);
     clearSolution();
     renderCube(SOLVED);
 }
 
-async function applyMove(move) {
+async function applyMove(move, turnMs = Number(turnTimeSlider.value)) {
     const response = await fetch("/api/apply", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -225,14 +263,14 @@ async function applyMove(move) {
 
     error.textContent = "";
     try {
-        await animateTurn(move);
+        await animateTurn(move, turnMs);
     } finally {
         renderCube(body.cube);
     }
     return true;
 }
 
-async function animateTurn(move) {
+async function animateTurn(move, turnMs) {
     const turn = TURNS[move[0]];
     let angle = turn.angle;
     if (move.endsWith("'")) {
@@ -251,7 +289,7 @@ async function animateTurn(move) {
     }
     cube3d.append(layer);
 
-    let duration = Number(turnTimeSlider.value);
+    let duration = turnMs;
     if (move.endsWith("2")) {
         duration *= HALF_TURN_FACTOR;
     }
@@ -262,35 +300,112 @@ async function animateTurn(move) {
     await layer.animate(keyframes, { duration, easing: "ease-in-out", fill: "forwards" }).finished;
 }
 
-async function previous() {
-    if (busy || step === 0) {
+async function previous(steps) {
+    if (isBusy() || steps.locked || steps.step === 0) {
         return;
     }
 
     busy = true;
     try {
-        if (await applyMove(inverse(moves[step - 1]))) {
-            step--;
-            renderSolution();
+        if (await applyMove(inverse(steps.moves[steps.step - 1]))) {
+            steps.step--;
+            renderSteps(steps);
         }
     } finally {
         busy = false;
     }
 }
 
-async function next() {
-    if (busy || step === moves.length) {
+async function next(steps) {
+    if (isBusy() || steps.locked || steps.step === steps.moves.length) {
         return;
     }
 
+    await stepForward(steps);
+}
+
+async function stepForward(steps) {
     busy = true;
     try {
-        if (await applyMove(moves[step])) {
-            step++;
-            renderSolution();
+        if (!(await applyMove(steps.moves[steps.step]))) {
+            return false;
         }
+        steps.step++;
+        renderSteps(steps);
+        return true;
     } finally {
         busy = false;
+    }
+}
+
+async function togglePlay(steps) {
+    if (playing === steps) {
+        playing = null;
+        renderSteps(steps);
+        return;
+    }
+
+    if (isBusy() || steps.locked || steps.step === steps.moves.length) {
+        return;
+    }
+
+    playing = steps;
+    renderSteps(steps);
+    try {
+        while (playing === steps && steps.step < steps.moves.length) {
+            if (!(await stepForward(steps))) {
+                break;
+            }
+        }
+    } finally {
+        if (playing === steps) {
+            playing = null;
+        }
+        renderSteps(steps);
+    }
+}
+
+function setSteps(steps, moves) {
+    steps.moves = moves;
+    steps.step = 0;
+    steps.locked = false;
+    renderSteps(steps);
+}
+
+function clearSteps(steps) {
+    if (playing === steps) {
+        playing = null;
+    }
+    setSteps(steps, []);
+}
+
+function lockSteps(steps) {
+    steps.locked = true;
+    renderSteps(steps);
+}
+
+function renderSteps(steps) {
+    steps.chips.textContent = "";
+    steps.moves.forEach((move, i) => {
+        const chip = document.createElement("span");
+        chip.classList.add("chip");
+        chip.classList.toggle("done", i < steps.step);
+        chip.classList.toggle("current", i === steps.step && !steps.locked);
+        chip.textContent = move;
+        steps.chips.append(chip);
+    });
+
+    const empty = steps.moves.length === 0;
+    const atEnd = steps.step === steps.moves.length;
+    const isPlaying = playing === steps;
+
+    steps.label.textContent = empty ? "" : `Step ${steps.step} of ${steps.moves.length}`;
+    steps.prevBtn.disabled = empty || steps.locked || isPlaying || steps.step === 0;
+    steps.nextBtn.disabled = empty || steps.locked || isPlaying || atEnd;
+    steps.playBtn.disabled = empty || steps.locked || (atEnd && !isPlaying);
+    steps.playBtn.textContent = isPlaying ? "Pause" : "Play";
+    if (steps.stepper) {
+        steps.stepper.hidden = empty;
     }
 }
 
@@ -400,28 +515,6 @@ function onPointerUp(event) {
     downTarget = null;
 }
 
-function renderSolution() {
-    solution.textContent = "";
-
-    for (let i = 0; i < moves.length; i++) {
-        const chip = document.createElement("span");
-        chip.classList.add("chip");
-
-        if (i < step) {
-            chip.classList.add("done");
-        }
-
-        if (i === step) {
-            chip.classList.add("current");
-        }
-
-        chip.textContent = moves[i];
-        solution.append(chip);
-    }
-
-    stepLabel.textContent = `Step ${step} of ${moves.length}`;
-}
-
 function setDefaultTurnTime() {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     turnTimeSlider.value = reducedMotion ? REDUCED_MOTION_TURN_MS : DEFAULT_TURN_MS;
@@ -437,6 +530,8 @@ function clamp(value, min, max) {
 }
 
 renderCube(SOLVED);
+renderSteps(scrambleSteps);
+renderSteps(solutionSteps);
 applyRotation();
 buildPalette();
 selectColor(brush);
