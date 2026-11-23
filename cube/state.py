@@ -10,6 +10,7 @@ from cube.faces import (
     TOTAL_STICKERS,
     Face,
     face_from_letter,
+    opposite,
 )
 from cube.moves import MOVE_NAMES, apply_move
 
@@ -145,6 +146,34 @@ class Cube:
 def random_moves(num_moves: int, seed: int | None = None) -> list[str]:
     """Random move names (repeatable with a seed)."""
     rng = np.random.default_rng(seed)
-    moves = list(rng.choice(MOVE_NAMES, size=num_moves))
 
-    return [str(move) for move in moves]
+    moves = []
+    for _ in range(num_moves):
+        move = rng.choice(MOVE_NAMES)
+        while _is_wasted(moves, move):
+            move = rng.choice(MOVE_NAMES)
+
+        moves.append(str(move))
+
+    return moves
+
+
+def _is_wasted(moves: list[str], move: str) -> bool:
+    """Whether move would undo or merge with the moves before it."""
+    if moves and _same_face(moves[-1], move):
+        return True
+    return (
+        len(moves) >= 2 and _same_axis(moves[-1], move) and _same_axis(moves[-2], move)
+    )
+
+
+def _same_face(move_a: str, move_b: str) -> bool:
+    """Whether two moves turn the same face, such as U and U2."""
+    return move_a[0] == move_b[0]
+
+
+def _same_axis(move_a: str, move_b: str) -> bool:
+    """Whether two moves turn the same or opposite faces, such as U and D'."""
+    face_a = face_from_letter(move_a[0])
+    face_b = face_from_letter(move_b[0])
+    return face_a == face_b or opposite(face_a) == face_b
