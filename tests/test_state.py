@@ -1,8 +1,10 @@
+from itertools import pairwise
+
 import numpy as np
 import pytest
 
 from cube.faces import TOTAL_STICKERS, Face
-from cube.state import SOLVED_STICKERS, Cube
+from cube.state import SOLVED_STICKERS, Cube, random_moves
 
 SOLVED_STRING = "".join(face.name * 9 for face in Face)
 
@@ -216,3 +218,45 @@ def test_scramble_same_seed_gives_same_cube():
 
 def test_scramble_different_seeds_give_different_cubes():
     assert Cube.scramble(20, seed=1) != Cube.scramble(20, seed=2)
+
+
+def test_random_moves_with_a_seed():
+    assert random_moves(10, seed=0) == [
+        "B",
+        "D2",
+        "R'",
+        "U",
+        "R",
+        "L2",
+        "D2",
+        "B'",
+        "D",
+        "B2",
+    ]
+
+
+@pytest.mark.parametrize("num_moves", [0, 1, 2, 25, 100])
+def test_random_moves_gives_the_number_asked_for(num_moves):
+    assert len(random_moves(num_moves, seed=3)) == num_moves
+
+
+@pytest.mark.parametrize("seed", range(20))
+def test_random_moves_never_turns_the_same_face_twice_in_a_row(seed):
+    moves = random_moves(50, seed=seed)
+    assert all(a[0] != b[0] for a, b in pairwise(moves))
+
+
+@pytest.mark.parametrize("seed", range(20))
+def test_random_moves_never_turns_one_axis_three_times_in_a_row(seed):
+    moves = random_moves(50, seed=seed)
+    axes = [
+        {"U": "UD", "D": "UD", "R": "RL", "L": "RL", "F": "FB", "B": "FB"}[m[0]]
+        for m in moves
+    ]
+    assert all(len({a, b, c}) > 1 for a, b, c in zip(axes, axes[1:], axes[2:]))
+
+
+@pytest.mark.parametrize("seed", range(5))
+def test_scramble_is_the_random_moves_applied(seed):
+    moves = random_moves(25, seed=seed)
+    assert Cube.scramble(25, seed=seed) == Cube.solved().apply_moves(moves)

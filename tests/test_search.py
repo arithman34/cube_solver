@@ -191,7 +191,7 @@ def test_first_solution_is_already_short():
     lengths = [
         len(solve(Cube.scramble(30, seed=seed), time_limit=0)) for seed in range(5)
     ]
-    assert lengths == [20, 21, 21, 21, 22]
+    assert lengths == [22, 21, 20, 21, 21]
 
 
 def test_more_time_never_gives_a_longer_solution():
