@@ -4,7 +4,7 @@ from functools import cache
 from cube.cfop.cross import _cross_key, _distances, _edge_moves, _move_key
 from cube.cfop.stages import solved_pairs
 from cube.cubies import MOVE_CUBIES, NUM_CORNERS, CubieCube
-from cube.solver.search import _allowed
+from cube.kociemba.search import _allowed
 
 MAX_PAIR_DEPTH = 20
 

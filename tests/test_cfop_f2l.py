@@ -13,8 +13,8 @@ from cube.cfop.f2l import (
 )
 from cube.cfop.stages import is_cross_solved, is_f2l_solved, solved_pairs
 from cube.cubies import CubieCube
+from cube.kociemba.search import _allowed
 from cube.moves import MOVE_NAMES
-from cube.solver.search import _allowed
 from cube.state import Cube
 
 SEXY_PAIR_0 = "R U R'"

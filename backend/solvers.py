@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
 
-from cube.solver import solve
+from cube.kociemba import solve
 from cube.state import Cube
 
 MODEL_PATH = Path(

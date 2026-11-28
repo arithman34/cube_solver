@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from numpy.typing import NDArray
 
-from cube.solver import solve
+from cube.kociemba import solve
 from cube.state import Cube
 from training.data import apply_scrambles, scramble_moves
 from training.encoding import encode_stickers

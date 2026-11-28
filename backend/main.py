@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.routes import router
 from backend.solvers import available_solvers
-from cube.solver.tables import get_tables
+from cube.kociemba.tables import get_tables
 
 FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
 

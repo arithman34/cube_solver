@@ -21,7 +21,7 @@ htmlcov/
 .env
 
 # Solver tables
-cube/solver/data/
+cube/kociemba/data/
 
 # Jupyter
 .ipynb_checkpoints/

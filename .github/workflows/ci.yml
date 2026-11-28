@@ -25,9 +25,9 @@ jobs:
             - name: Cache solver tables
               uses: actions/cache@v4
               with:
-                path: cube/solver/data
+                path: cube/kociemba/data
                 # Rebuild the tables whenever the code that defines them changes
-                key: tables-${{ hashFiles('cube/solver/coords.py', 'cube/solver/tables.py', 'cube/cubies.py', 'cube/moves.py') }}
+                key: tables-${{ hashFiles('cube/kociemba/coords.py', 'cube/kociemba/tables.py', 'cube/cubies.py', 'cube/moves.py') }}
 
             - name: Lint
               run: uv run ruff check .

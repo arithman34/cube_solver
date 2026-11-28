@@ -1,7 +1,7 @@
 import time
 
 from cube.cubies import CubieCube
-from cube.solver.search import phase_1_solutions, search_phase_2
+from cube.kociemba.search import phase_1_solutions, search_phase_2
 from cube.state import Cube
 from cube.validation import is_solvable
 

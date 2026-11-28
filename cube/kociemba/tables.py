@@ -7,8 +7,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from cube.cubies import CubieCube
-from cube.moves import MOVE_NAMES
-from cube.solver.coords import (
+from cube.kociemba.coords import (
     N_CORNERS,
     N_FLIP,
     N_SLICE,
@@ -28,6 +27,7 @@ from cube.solver.coords import (
     set_twist,
     set_ud_edges,
 )
+from cube.moves import MOVE_NAMES
 
 PHASE_1_MOVES = MOVE_NAMES
 PHASE_2_MOVES = ("U", "U'", "U2", "D", "D'", "D2", "R2", "L2", "F2", "B2")
