@@ -5,6 +5,7 @@ from backend.solvers import (
     SolveFailed,
     SolverUnavailable,
     available_solvers,
+    cfop_solver,
     kociemba_solver,
     neural_solver,
 )
@@ -19,6 +20,22 @@ def test_kociemba_solver_solves_a_scramble():
     assert cube.apply_moves(moves).is_solved()
 
 
+def test_cfop_solver_solves_a_scramble():
+    cube = Cube.scramble(20, seed=0)
+
+    moves = cfop_solver().solve(cube, 1.0)
+
+    assert cube.apply_moves(moves).is_solved()
+
+
+def test_cfop_solver_ignores_the_time_limit():
+    solver = cfop_solver()
+
+    assert solver.name == "cfop"
+    assert solver.label == "CFOP (human)"
+    assert solver.uses_time_limit is False
+
+
 def test_neural_solver_without_a_checkpoint(tmp_path):
     pytest.importorskip("torch")
 
@@ -31,7 +48,7 @@ def test_available_solvers_without_a_checkpoint(tmp_path, monkeypatch):
 
     found = available_solvers.__wrapped__()
 
-    assert list(found) == ["kociemba"]
+    assert list(found) == ["kociemba", "cfop"]
 
 
 @pytest.fixture
@@ -73,4 +90,4 @@ def test_available_solvers_with_a_checkpoint(small_checkpoint, monkeypatch):
 
     found = available_solvers.__wrapped__()
 
-    assert list(found) == ["kociemba", "neural"]
+    assert list(found) == ["kociemba", "cfop", "neural"]
