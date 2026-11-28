@@ -1,7 +1,7 @@
 import pytest
 
 from cube.cubies import CubieCube
-from cube.solver.coords import (
+from cube.kociemba.coords import (
     N_CORNERS,
     N_FLIP,
     N_SLICE,

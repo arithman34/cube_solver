@@ -1,7 +1,7 @@
 from collections.abc import Iterator
 
 from cube.cubies import CubieCube
-from cube.solver.coords import (
+from cube.kociemba.coords import (
     get_corners,
     get_flip,
     get_slice,
@@ -9,7 +9,7 @@ from cube.solver.coords import (
     get_twist,
     get_ud_edges,
 )
-from cube.solver.tables import PHASE_1_MOVES, PHASE_2_MOVES, Tables, get_tables
+from cube.kociemba.tables import PHASE_1_MOVES, PHASE_2_MOVES, Tables, get_tables
 
 MAX_PHASE_1_DEPTH = 12
 MAX_PHASE_2_DEPTH = 18

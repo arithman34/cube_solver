@@ -2,8 +2,8 @@ import numpy as np
 import pytest
 
 from cube.cubies import CubieCube
-from cube.solver import tables
-from cube.solver.coords import (
+from cube.kociemba import tables
+from cube.kociemba.coords import (
     get_corners,
     get_flip,
     get_slice,
@@ -11,7 +11,7 @@ from cube.solver.coords import (
     get_twist,
     get_ud_edges,
 )
-from cube.solver.tables import PHASE_1_MOVES, PHASE_2_MOVES, get_tables
+from cube.kociemba.tables import PHASE_1_MOVES, PHASE_2_MOVES, get_tables
 
 PHASE_1 = [
     ("twist_move", get_twist),

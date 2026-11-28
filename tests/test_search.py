@@ -3,10 +3,9 @@ from itertools import islice, pairwise
 import pytest
 
 from cube.cubies import CubieCube
-from cube.moves import MOVE_NAMES
-from cube.solver import solve
-from cube.solver.coords import get_flip, get_slice, get_twist
-from cube.solver.search import (
+from cube.kociemba import solve
+from cube.kociemba.coords import get_flip, get_slice, get_twist
+from cube.kociemba.search import (
     MAX_PHASE_1_DEPTH,
     PHASE_2_MOVES,
     _allowed,
@@ -16,7 +15,8 @@ from cube.solver.search import (
     search_phase_1,
     search_phase_2,
 )
-from cube.solver.tables import get_tables
+from cube.kociemba.tables import get_tables
+from cube.moves import MOVE_NAMES
 from cube.state import Cube
 
 

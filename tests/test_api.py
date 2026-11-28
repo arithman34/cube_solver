@@ -123,6 +123,32 @@ def test_methods_lists_kociemba(client):
     } in response.json()
 
 
+def test_methods_lists_cfop(client):
+    response = client.get("/api/methods")
+    assert {
+        "name": "cfop",
+        "label": "CFOP (human)",
+        "uses_time_limit": False,
+    } in response.json()
+
+
+def test_solve_with_cfop_by_name(client):
+    cube = Cube.solved().apply_moves(["F", "R"]).to_string()
+    response = client.post("/api/solve", json={"cube": cube, "method": "cfop"})
+    body = response.json()
+    assert response.status_code == 200
+    assert body["moves"] == ["R'", "F'"]
+    assert body["method"] == "cfop"
+
+
+def test_cfop_reports_flipped_edge(client):
+    edge = EDGE_FACELETS[0].tolist()
+    cube = _swap(SOLVED, edge, edge[::-1])
+    response = client.post("/api/solve", json={"cube": cube, "method": "cfop"})
+    assert response.status_code == 422
+    assert response.json() == {"detail": [CubeError.FLIPPED_EDGE.value]}
+
+
 def test_solve_passes_the_time_limit_to_the_solver(client, monkeypatch):
     limits = []
 

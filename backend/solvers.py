@@ -4,7 +4,8 @@ from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
 
-from cube.solver import solve
+from cube.cfop import solve as cfop_solve
+from cube.kociemba import solve as kociemba_solve
 from cube.state import Cube
 
 MODEL_PATH = Path(
@@ -39,8 +40,16 @@ def kociemba_solver() -> Solver:
     return Solver(
         name="kociemba",
         label="Kociemba (two-phase)",
-        solve=solve,
+        solve=kociemba_solve,
         uses_time_limit=True,
+    )
+
+
+def cfop_solver() -> Solver:
+    return Solver(
+        name="cfop",
+        label="CFOP (human)",
+        solve=cfop_solve,
     )
 
 
@@ -80,7 +89,7 @@ def neural_solver(path: Path, beam_width: int = 300) -> Solver:
 @cache
 def available_solvers() -> dict[str, Solver]:
     """Kociemba is always available. Neural only if its checkpoint loads."""
-    solvers = [kociemba_solver()]
+    solvers = [kociemba_solver(), cfop_solver()]
     try:
         solvers.append(neural_solver(MODEL_PATH))
     except SolverUnavailable as error:
